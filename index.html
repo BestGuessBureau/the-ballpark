@@ -145,6 +145,12 @@ button.add:active{transform:translateY(1px)}
 .pk-grid button:active,.pk-grid button.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
 .pk-skip{display:block;width:100%;text-align:center;margin-top:10px;padding:8px;border:1px dashed var(--line);border-radius:8px}
 .pk-skip[hidden],.pk-back[hidden]{display:none}
+.pk-year{grid-column:1/-1;font-family:"Barlow Condensed";font-weight:600;font-size:14px;
+  color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:4px}
+.pk-grid button.used{opacity:.35;cursor:default}
+.add.alt{background:#fff;color:var(--ink);border:1px solid var(--ink);margin-left:8px}
+#otMultiAdd{width:100%;margin-top:10px}
+#otMultiAdd:disabled{opacity:.5;cursor:default}
 details.mini{border-top:none;margin-top:4px;padding-top:0}
 details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding:6px 0}
 @media (max-width:460px){
@@ -282,6 +288,12 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
     </div>
     <div id="otRows"></div>
     <button class="add" id="addOt" type="button">Add a check</button>
+    <button class="add alt" id="addOtMulti" type="button">Pick several dates…</button>
+    <div class="picker" id="otMultiPanel" hidden>
+      <div class="pk-head"><span>Pick every check with OT</span><button type="button" class="pk-close" id="otMultiClose" aria-label="Close">×</button></div>
+      <div class="pk-grid" id="otMultiGrid"></div>
+      <button class="add" id="otMultiAdd" type="button" disabled>Tap the check dates, then add them</button>
+    </div>
     <label for="otRate">OT hourly rate override
       <span class="hint" id="otRateHint">Used only for rows entered as hours. Leave blank to price hours from the salary in effect on each check date.</span>
     </label>
@@ -732,6 +744,40 @@ function addOtRow(vals){
   $('otRows').appendChild(div);
 }
 $('addOt').onclick = ()=>{ addOtRow(); $('otDetails').open = true; };
+
+// multi-date picker: tap several check dates, add them all with 12 hrs each
+const otMultiPanel = $('otMultiPanel');
+$('addOtMulti').onclick = ()=>{
+  if (!otMultiPanel.hidden){ otMultiPanel.hidden = true; return; }
+  buildOtMulti(); otMultiPanel.hidden = false; $('otDetails').open = true;
+};
+$('otMultiClose').onclick = ()=>{ otMultiPanel.hidden = true; };
+function buildOtMulti(){
+  const used = new Set([...$('otRows').children].map(d=>d.querySelector('[data-k=date]').value).filter(Boolean));
+  const grid = $('otMultiGrid'); grid.innerHTML = '';
+  let year = '';
+  for (const d of PAY_DATES.filter(d=>d>='2025-07-01')){
+    const y = d.slice(0,4);
+    if (y!==year){ year=y; const s=document.createElement('span'); s.className='pk-year'; s.textContent=y; grid.appendChild(s); }
+    const b=document.createElement('button'); b.type='button';
+    const [,m,dd]=d.split('-'); b.textContent=`${m}/${dd}`; b.dataset.date=d;
+    if (used.has(d)){ b.disabled=true; b.classList.add('used'); }
+    else b.onclick=()=>{ b.classList.toggle('sel'); updateOtMultiBtn(); };
+    grid.appendChild(b);
+  }
+  updateOtMultiBtn();
+}
+function updateOtMultiBtn(){
+  const n = $('otMultiGrid').querySelectorAll('.sel').length;
+  const btn = $('otMultiAdd');
+  btn.disabled = n===0;
+  btn.textContent = n===0 ? 'Tap the check dates, then add them'
+    : `Add ${n} check${n===1?'':'s'} — 12 OT hrs each`;
+}
+$('otMultiAdd').onclick = ()=>{
+  for (const b of $('otMultiGrid').querySelectorAll('.sel')) addOtRow({date:b.dataset.date, hours:12});
+  otMultiPanel.hidden = true; recalc();
+};
 
 const cleanNum = v => { const s = String(v).replace(/[$,\s]/g,''); if(s==='') return null; const n = Number(s); return isNaN(n) ? null : n; };
 const num = id => cleanNum($(id).value);
