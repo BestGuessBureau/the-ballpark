@@ -779,7 +779,9 @@ function addOtRow(vals, collapsed){
       <label>OT + comp dollars<input type="text" inputmode="decimal" data-k="wage" placeholder="$" autocomplete="off"></label>
       <label class="full">Acting, night differential, court time $<input type="text" inputmode="decimal" data-k="other" placeholder="$" autocomplete="off"></label>
       <label class="checkline"><input type="checkbox" data-k="mupdOn"> Detailed to a medic unit (the 5% club)</label>
-      <label class="full mupdwrap" hidden>Medic hours on this check (Fire MUPD line)<input type="number" inputmode="decimal" data-k="mupd" placeholder="12"></label>
+      <label class="full mupdwrap" hidden>Medic hours on this check (Fire MUPD line)
+        <span class="hint">Regular working shifts you were detailed — the 5% never applies to OT hours.</span>
+        <input type="number" inputmode="decimal" data-k="mupd" placeholder="12"></label>
       <div class="otret"></div>
       <button class="del" type="button">Remove paycheck</button>
     </div>`;
