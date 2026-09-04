@@ -109,15 +109,36 @@ td{padding:8px 5px;border-bottom:1px solid var(--line);vertical-align:top}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.total td{border-bottom:none;border-top:2px solid var(--ink);font-weight:600}
 tr.take td{border-bottom:none;color:var(--muted)}
-.otrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:center}
-.otrow input[data-k=mupd]{display:none}
-#otDetails.mupd-on .otrow{grid-template-columns:1fr 1fr 1fr 1fr auto}
-#otDetails.mupd-on .otrow input[data-k=mupd]{display:block}
-.otrow select[data-k=date]{grid-column:1/-1}
-.otrow input{padding:9px 8px;font-size:14.5px}
-.otrow select{padding:9px 4px;font-size:14px}
-.otrow .del{background:none;border:none;color:var(--red);font-size:20px;cursor:pointer;padding:4px 6px;line-height:1}
-.otret{font-size:13px;color:var(--muted);text-align:right;grid-column:1/-1;margin-top:-4px}
+/* OT paycheck rows: compact summary line, tap to expand the full form */
+.otrow2{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:#fff}
+.otsum{display:flex;width:100%;gap:8px;align-items:center;font:inherit;font-size:14.5px;
+  padding:11px 12px;background:none;border:none;cursor:pointer;text-align:left}
+.otsum .osdate{font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums}
+.otsum .oshrs{color:var(--muted);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.otsum .osret{color:var(--ok);font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:13.5px}
+.otsum::after{content:"";width:7px;height:7px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);flex:none;margin:-3px 2px 0;transition:transform .15s}
+.otrow2.closed .otsum::after{transform:rotate(-45deg);margin-top:2px}
+.otrow2.closed .otform{display:none}
+.otform{padding:4px 12px 12px;display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;border-top:1px solid var(--line)}
+.otform label{margin:8px 0 0;font-size:13px;font-weight:600}
+.otform label.full,.otform .checkline{grid-column:1/-1}
+.otform input,.otform select{margin-top:3px;padding:9px 10px;font-size:15px}
+.otform .checkline{display:flex;align-items:center;gap:8px;font-size:14px;margin-top:10px}
+.otform .checkline input{width:auto;margin:0}
+.otform .del{grid-column:1/-1;font:inherit;font-size:13.5px;font-weight:600;color:var(--red);
+  background:none;border:1px dashed var(--line);border-radius:8px;padding:8px;cursor:pointer;margin-top:10px}
+.otret{font-size:13px;color:var(--muted);text-align:right;grid-column:1/-1;margin-top:6px}
+/* default-hours chooser in the paycheck picker */
+.defrow{display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap;font-size:14px;font-weight:600}
+.defbtns{display:flex;gap:6px}
+.defbtns button{font:inherit;font-size:14px;padding:7px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer}
+.defbtns button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+#otDefCustom{width:70px;padding:7px 8px}
+.pk-grid button.sel::before{content:"✓ "}
+#otMultiGrid{max-height:48vh;overflow-y:auto;-webkit-overflow-scrolling:touch;
+  border-bottom:1px solid var(--line);padding-bottom:8px}
+.picker-open .result{display:none}
 button.add{font:inherit;font-weight:600;background:var(--ink);color:#fff;border:none;
   border-radius:8px;padding:10px 16px;cursor:pointer;margin-top:6px}
 button.add:active{transform:translateY(1px)}
@@ -283,28 +304,34 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
 
 <section>
   <h2>OT, comp &amp; other eligible pay</h2>
-  <p class="sect-note">One row per check dated 07/01/2025 or later. Wage dollars only — don't include the Longevity Pay line. "Other" is for acting pay, night differential, court time.</p>
+  <p class="sect-note">Wage dollars only — don't include the Longevity Pay line.</p>
   <details id="otDetails">
     <summary>OT / comp log <span class="cnt" id="otCount"></span></summary>
-    <div class="otrow" style="margin-bottom:2px">
-      <span class="hint" style="grid-column:1/-1">One row per check, with that check's totals: OT+comp $ · OT hours · other $. Picking a date starts the row at 12 OT hours (one shift) — worked more OT that period? Type the check's real total: 24, 36, and so on.</span>
-    </div>
-    <details class="mini" id="mupdClub">
-      <summary>For the 5% club — detailed to a medic unit?</summary>
-      <span class="hint">Opens a "medic" box on each row: that check's Fire MUPD hours, paid at 5% of your hourly rate. The retro raises apply to those dollars too.</span>
-    </details>
+    <p class="hint" style="margin:2px 0 10px">Select every paycheck that included OT. Each one starts at 12 hours. Tap a paycheck afterward to change the hours or add comp pay, medic detail, or other eligible pay (acting, night differential, court time).</p>
     <div id="otRows"></div>
-    <button class="add" id="addOt" type="button">Add a check</button>
-    <button class="add alt" id="addOtMulti" type="button">Pick several dates…</button>
+    <button class="add" id="addOtMulti" type="button">Select OT paychecks</button>
+    <button class="add alt" id="addOt" type="button">Add one paycheck</button>
     <div class="picker" id="otMultiPanel" hidden>
-      <div class="pk-head"><span>Pick every check with OT</span><button type="button" class="pk-close" id="otMultiClose" aria-label="Close">×</button></div>
+      <div class="pk-head"><span>Every paycheck with OT</span><button type="button" class="pk-close" id="otMultiClose" aria-label="Close">×</button></div>
+      <div class="defrow"><span>OT hours per check:</span>
+        <div class="defbtns" id="otDefBtns">
+          <button type="button" data-h="12" class="on">12</button>
+          <button type="button" data-h="24">24</button>
+          <button type="button" data-h="36">36</button>
+          <button type="button" data-h="custom">Custom</button>
+        </div>
+        <input type="number" id="otDefCustom" inputmode="decimal" value="12" hidden>
+      </div>
       <div class="pk-grid" id="otMultiGrid"></div>
       <button class="add" id="otMultiAdd" type="button" disabled>Tap the check dates, then add them</button>
     </div>
+    <details class="mini" id="otAdvanced">
+    <summary>Advanced options</summary>
     <label for="otRate">OT hourly rate override
       <span class="hint" id="otRateHint">Used only for OT hours (not medic hours). Leave blank to price hours from the salary in effect on each check date.</span>
     </label>
     <input type="text" id="otRate" inputmode="decimal" placeholder="" autocomplete="off">
+    </details>
   </details>
 </section>
 
@@ -731,47 +758,88 @@ for (const id of ['chg1','chg2']){
   }
 }
 
-// OT rows
-function addOtRow(vals){
-  const div = document.createElement('div'); div.className='otrow';
+// OT paycheck rows: compact summary line, tap to expand the full form
+function updateOtSummary(div){
+  const v = k => { const el = div.querySelector(`[data-k=${k}]`); return el ? el.value.trim() : ''; };
+  div.querySelector('.osdate').textContent = v('date') ? fmtDate(v('date')) : 'pick the paycheck →';
+  const bits = [];
+  if (v('hours')) bits.push(`${v('hours')} OT hrs`);
+  if (v('wage'))  bits.push(`$${v('wage').replace(/^\$/,'')} comp`);
+  if (v('other')) bits.push('other');
+  if (div.querySelector('[data-k=mupdOn]').checked && v('mupd')) bits.push(`${v('mupd')} medic`);
+  div.querySelector('.oshrs').textContent = bits.join(' · ');
+}
+function addOtRow(vals, collapsed){
+  const div = document.createElement('div'); div.className = 'otrow2' + (collapsed ? ' closed' : '');
   const opts = '<option value="">date…</option>'+PAY_DATES.filter(d=>d>='2025-07-01').map(d=>`<option value="${d}">${fmtDate(d)}</option>`).join('');
-  div.innerHTML = `<select data-k="date">${opts}</select><input type="text" inputmode="decimal" data-k="wage" placeholder="$" autocomplete="off">
-    <input type="number" inputmode="decimal" data-k="hours" placeholder="hrs"><input type="text" inputmode="decimal" data-k="other" placeholder="$" autocomplete="off">
-    <input type="number" inputmode="decimal" data-k="mupd" placeholder="medic" title="Fire MUPD hours — detailed to a medic unit">
-    <button class="del" type="button" aria-label="Remove row">×</button><div class="otret"></div>`;
-  if (vals) for (const inp of div.querySelectorAll('input,select')) inp.value = vals[inp.dataset.k] ?? '';
+  div.innerHTML = `<button type="button" class="otsum"><span class="osdate"></span><span class="oshrs"></span><span class="osret"></span></button>
+    <div class="otform">
+      <label class="full">Paycheck<select data-k="date">${opts}</select></label>
+      <label>OT hours<input type="number" inputmode="decimal" data-k="hours" placeholder="0"></label>
+      <label>OT + comp dollars<input type="text" inputmode="decimal" data-k="wage" placeholder="$" autocomplete="off"></label>
+      <label class="full">Acting, night differential, court time $<input type="text" inputmode="decimal" data-k="other" placeholder="$" autocomplete="off"></label>
+      <label class="checkline"><input type="checkbox" data-k="mupdOn"> Detailed to a medic unit (the 5% club)</label>
+      <label class="full mupdwrap" hidden>Medic hours on this check (Fire MUPD line)<input type="number" inputmode="decimal" data-k="mupd" placeholder="12"></label>
+      <div class="otret"></div>
+      <button class="del" type="button">Remove paycheck</button>
+    </div>`;
+  if (vals) for (const inp of div.querySelectorAll('input,select')){
+    if (inp.type === 'checkbox') continue;
+    inp.value = vals[inp.dataset.k] ?? '';
+  }
+  div.querySelector('.otsum').onclick = ()=>{ div.classList.toggle('closed'); };
   div.querySelector('.del').onclick = ()=>{ div.remove(); recalc(); };
-  div.querySelectorAll('input,select').forEach(i=>i.addEventListener('input', recalc));
+  div.querySelectorAll('input,select').forEach(i=>i.addEventListener('input', ()=>{ updateOtSummary(div); recalc(); }));
+  // medic unit detail: checkbox reveals the hours box, starting at one shift
+  const mupdOn = div.querySelector('[data-k=mupdOn]');
+  const mupdInp = div.querySelector('[data-k=mupd]');
+  mupdOn.addEventListener('change', ()=>{
+    div.querySelector('.mupdwrap').hidden = !mupdOn.checked;
+    if (mupdOn.checked && mupdInp.value.trim()==='') mupdInp.value = 12;
+    updateOtSummary(div); recalc();
+  });
+  if (vals && vals.mupd){ mupdOn.checked = true; div.querySelector('.mupdwrap').hidden = false; }
   // picking a date on a fresh row pre-fills a typical 12-hour shift
   const hoursInp = div.querySelector('[data-k=hours]');
   hoursInp.addEventListener('input', ()=>{ hoursInp.dataset.manual = '1'; });
   div.querySelector('[data-k=date]').addEventListener('change', ()=>{
     const empty = k => div.querySelector(`[data-k=${k}]`).value.trim()==='';
     if (empty('hours') && empty('wage') && empty('other') && empty('mupd') && !hoursInp.dataset.manual){
-      hoursInp.value = 12; recalc();
+      hoursInp.value = 12;
     }
+    updateOtSummary(div); recalc();
   });
+  updateOtSummary(div);
   $('otRows').appendChild(div);
 }
 $('addOt').onclick = ()=>{ addOtRow(); $('otDetails').open = true; };
 
-// "For the 5% club" — reveal the medic (Fire MUPD) box on every row
-$('mupdClub').addEventListener('toggle', ()=>{
-  $('otDetails').classList.toggle('mupd-on', $('mupdClub').open);
-});
-
-// multi-date picker: tap several check dates, add them all with 12 hrs each
+// paycheck picker: tap every OT check, pick the default hours, add them all
 const otMultiPanel = $('otMultiPanel');
+function closeOtPanel(){ otMultiPanel.hidden = true; document.body.classList.remove('picker-open'); }
 $('addOtMulti').onclick = ()=>{
-  if (!otMultiPanel.hidden){ otMultiPanel.hidden = true; return; }
+  if (!otMultiPanel.hidden){ closeOtPanel(); return; }
   buildOtMulti(); otMultiPanel.hidden = false; $('otDetails').open = true;
+  document.body.classList.add('picker-open');
 };
-$('otMultiClose').onclick = ()=>{ otMultiPanel.hidden = true; };
+$('otMultiClose').onclick = closeOtPanel;
+let otDefSel = '12';
+$('otDefBtns').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if (!b) return;
+  otDefSel = b.dataset.h;
+  for (const x of $('otDefBtns').children) x.classList.toggle('on', x===b);
+  $('otDefCustom').hidden = otDefSel !== 'custom';
+  updateOtMultiBtn();
+});
+$('otDefCustom').addEventListener('input', updateOtMultiBtn);
+function otDefHours(){ return otDefSel==='custom' ? (cleanNum($('otDefCustom').value) ?? 12) : Number(otDefSel); }
 function buildOtMulti(){
   const used = new Set([...$('otRows').children].map(d=>d.querySelector('[data-k=date]').value).filter(Boolean));
+  // only paychecks eligible for retro: before the first check at the new rate
+  const firstNew = $('firstNew').value || C.IMPLEMENTATION_DATE || PAY_DATES.find(x=>x>todayISO()) || null;
   const grid = $('otMultiGrid'); grid.innerHTML = '';
   let year = '';
-  for (const d of PAY_DATES.filter(d=>d>='2025-07-01')){
+  for (const d of PAY_DATES.filter(d=>d>='2025-07-01' && (!firstNew || d<firstNew))){
     const y = d.slice(0,4);
     if (y!==year){ year=y; const s=document.createElement('span'); s.className='pk-year'; s.textContent=y; grid.appendChild(s); }
     const b=document.createElement('button'); b.type='button';
@@ -786,12 +854,13 @@ function updateOtMultiBtn(){
   const n = $('otMultiGrid').querySelectorAll('.sel').length;
   const btn = $('otMultiAdd');
   btn.disabled = n===0;
-  btn.textContent = n===0 ? 'Tap the check dates, then add them'
-    : `Add ${n} check${n===1?'':'s'} — 12 OT hrs each`;
+  btn.textContent = n===0 ? 'Tap every paycheck that had OT'
+    : `Add ${n} paycheck${n===1?'':'s'} — ${otDefHours()} OT hrs each`;
 }
 $('otMultiAdd').onclick = ()=>{
-  for (const b of $('otMultiGrid').querySelectorAll('.sel')) addOtRow({date:b.dataset.date, hours:12});
-  otMultiPanel.hidden = true; recalc();
+  const h = otDefHours();
+  for (const b of $('otMultiGrid').querySelectorAll('.sel')) addOtRow({date:b.dataset.date, hours:h}, true);
+  closeOtPanel(); recalc();
 };
 
 const cleanNum = v => { const s = String(v).replace(/[$,\s]/g,''); if(s==='') return null; const n = Number(s); return isNaN(n) ? null : n; };
@@ -801,7 +870,8 @@ const dat = id => $(id).value || null;
 function gatherInputs(){
   const otRows = [...$('otRows').children].map(div=>{
     const g = k => { const el = div.querySelector(`[data-k=${k}]`); const v = el.value.trim(); return v===''?null:(k==='date'?v:cleanNum(v)); };
-    return { date:g('date'), wage:g('wage'), hours:g('hours'), other:g('other'), mupd:g('mupd'), _div:div };
+    return { date:g('date'), wage:g('wage'), hours:g('hours'), other:g('other'),
+      mupd: div.querySelector('[data-k=mupdOn]').checked ? g('mupd') : null, _div:div };
   });
   return {
     typedSalary: num('salary'),
@@ -845,7 +915,10 @@ function recalc(){
     $('otCount').textContent=''; $('dedTotal').textContent='';
     if (r.baseSal == null)
       $('otRateHint').textContent = 'Used only for rows entered as hours. Leave blank to price hours from the salary in effect on each check date.';
-    for (const div of $('otRows').children){ const el=div.querySelector('.otret'); if (el) el.textContent=''; }
+    for (const div of $('otRows').children){
+      const el=div.querySelector('.otret'); if (el) el.textContent='';
+      const sr=div.querySelector('.osret'); if (sr) sr.textContent='';
+    }
     return;
   }
   $('resultPanel').classList.remove('empty');
@@ -878,16 +951,19 @@ function recalc(){
   $('stubSec').hidden = false;
 
   // OT per-row feedback + count
-  let otN = 0;
+  let otN = 0, otHrs = 0;
   for (const row of inp.otRows){
     const det = r.otDetail.find(d=>d._div===row._div) || r.otDetail.find(d=>d.date===row.date);
     const el = row._div.querySelector('.otret');
-    if (row.date && det){ otN++;
+    const sr = row._div.querySelector('.osret');
+    if (row.date && det){ otN++; otHrs += row.hours || 0;
       el.textContent = det.retro ? `raise ${(det.raisePct*100).toFixed(2)}% → retro ${fmt$(det.retro)}`
         : (row.date < '2025-07-01' || row.date >= r.firstNew ? 'outside the retro period — not counted' : 'retro $0.00');
-    } else el.textContent='';
+      sr.textContent = det.retro ? `+${fmt$(det.retro)}` : '';
+    } else { el.textContent=''; sr.textContent=''; }
   }
-  $('otCount').textContent = otN ? `(${otN} check${otN>1?'s':''} · ${fmt$(r.otTotal)})` : '';
+  $('otCount').textContent = otN
+    ? `(${otN} check${otN>1?'s':''}${otHrs ? ` · ${otHrs} OT hrs` : ''} · ${fmt$(r.otTotal)} retro)` : '';
   $('dedTotal').textContent = `(total ${(r.dedRate*100).toFixed(2)}%)`;
 
   // OT auto rate hint
@@ -941,6 +1017,7 @@ function resetAll(){
   $('chg1').value=''; $('chg2').value=''; $('method').value='Compound'; $('prorate').checked=true;
   refreshFirstNew();
   $('otRows').innerHTML='';
+  closeOtPanel();
   $('startDate').value='';
   const b=$('startBtn'); b.textContent='Tap to pick year → month'; b.classList.remove('set');
   pkClose();
