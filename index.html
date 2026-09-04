@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Ballpark — Local 22 Retro Pay Estimator</title>
+<meta name="description" content="The Ballpark: estimate your Local 22 retro check from the 2025–2027 Act 111 Award. Estimates only. Nothing you enter leaves your phone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1c1e22;        /* turnout black */
+  --paper:#eef0f2;      /* station concrete */
+  --panel:#ffffff;
+  --red:#c2201b;        /* engine red */
+  --stripe:#f5c518;     /* reflective stripe yellow */
+  --stripe2:#d7d9dc;    /* reflective silver */
+  --text:#23262b;
+  --muted:#5d636c;
+  --line:#d5d8dd;
+  --ok:#1c7a3d;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+html,body{overflow-x:hidden;max-width:100%}
+body{margin:0;background:var(--paper);color:var(--text);
+  font:16px/1.5 Barlow,system-ui,-apple-system,sans-serif}
+.wrap{max-width:580px;margin:0 auto;padding:0 16px 150px}
+header{padding:20px 0 10px;position:relative}
+.reset{position:absolute;top:22px;right:0;font:inherit;font-size:13.5px;font-weight:600;
+  color:var(--red);background:none;border:1px solid var(--line);border-radius:8px;
+  padding:6px 12px;cursor:pointer}
+.reset:active{background:#fbeceb}
+header h1{font-family:"Barlow Condensed";font-weight:700;font-size:40px;line-height:1;
+  margin:0;text-transform:uppercase;letter-spacing:.01em}
+header h1 span{color:var(--red)}
+header .tagline{margin:3px 0 0;font-variant:small-caps;letter-spacing:.14em;
+  font-size:14px;color:var(--text);font-weight:600}
+header .award{margin:8px 0 0;color:var(--text);font-size:15px;font-weight:500}
+header .privacy{margin:2px 0 0;color:var(--muted);font-size:13px}
+
+/* Result — fixed bottom bar with turnout stripe */
+.result{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--ink);color:#fff;
+  box-shadow:0 -4px 16px rgba(20,22,26,.22)}
+.stripe{height:6px;background:var(--stripe)}
+.result-inner{max-width:580px;margin:0 auto;padding:12px 16px;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
+  display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rleft{flex:1;min-width:0}
+.result .label{font-family:"Barlow Condensed";font-weight:600;font-size:15px;
+  letter-spacing:.05em;color:#c8cbd1;text-transform:uppercase}
+.result .big{font-family:"Barlow Condensed";font-weight:700;line-height:1;
+  font-size:clamp(22px, 8.5vw, 36px);
+  font-variant-numeric:tabular-nums;white-space:nowrap;flex:none}
+.result .sub{font-size:13px;color:#c8cbd1;margin-top:1px}
+.result .sub b{color:#fff;font-weight:600}
+.result .msg{font-size:14px;color:#f0d7a0;margin:0}
+/* slim empty state: just the message on one line */
+.result.empty .result-inner{padding:9px 16px}
+.result.empty .label,.result.empty .sub,.result.empty .big{display:none}
+.req-star{color:var(--red);font-weight:700}
+
+section{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  padding:16px;margin-bottom:14px}
+h2{font-family:"Barlow Condensed";font-weight:600;font-size:20px;margin:0 0 2px;
+  text-transform:uppercase;letter-spacing:.02em}
+h2 .req{color:var(--red)}
+.sect-note{color:var(--muted);font-size:13.5px;margin:0 0 12px}
+label{display:block;font-weight:600;font-size:15px;margin:14px 0 4px}
+.group-label{font-family:"Barlow Condensed";font-weight:600;font-size:17px;text-transform:uppercase;
+  letter-spacing:.03em;margin:10px 0 0}
+label:first-of-type{margin-top:8px}
+.hint{font-weight:400;color:var(--muted);font-size:13px;display:block;margin-top:3px;line-height:1.4}
+input,select{width:100%;padding:11px 12px;font:inherit;font-size:16px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--text)}
+input:focus,select:focus,.datebtn:focus-visible{outline:none;border-color:var(--red);
+  box-shadow:0 0 0 3px rgba(194,32,27,.16)}
+.row2{display:flex;gap:10px}
+.row2>div{flex:1}
+.or{display:flex;align-items:center;gap:12px;color:var(--text);font-size:13px;margin:14px 0 2px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.or::before,.or::after{content:"";flex:1;height:1px;background:var(--line)}
+details{border-top:1px solid var(--line);margin-top:8px;padding-top:4px}
+details:first-of-type{border-top:none}
+summary{cursor:pointer;font-weight:600;font-size:15px;padding:10px 0;list-style:none;display:flex;align-items:center;gap:8px}
+summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(-45deg);transition:transform .15s;flex:none}
+details[open]>summary::before{transform:rotate(45deg)}
+summary .cnt{color:var(--muted);font-weight:400;font-size:13px}
+.tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:8px -4px 0;padding:0 4px}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:0;min-width:0}
+th{font-family:"Barlow Condensed";font-weight:600;font-size:13px;text-align:left;
+  color:var(--muted);border-bottom:2px solid var(--ink);padding:6px 5px 5px;text-transform:uppercase;letter-spacing:.02em}
+td{padding:8px 5px;border-bottom:1px solid var(--line);vertical-align:top}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.total td{border-bottom:none;border-top:2px solid var(--ink);font-weight:600}
+tr.take td{border-bottom:none;color:var(--muted)}
+.otrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:center}
+.otrow select[data-k=date]{grid-column:1/-1}
+.otrow input{padding:9px 8px;font-size:14.5px}
+.otrow select{padding:9px 4px;font-size:14px}
+.otrow .del{background:none;border:none;color:var(--red);font-size:20px;cursor:pointer;padding:4px 6px;line-height:1}
+.otret{font-size:13px;color:var(--muted);text-align:right;grid-column:1/-1;margin-top:-4px}
+button.add{font:inherit;font-weight:600;background:var(--ink);color:#fff;border:none;
+  border-radius:8px;padding:10px 16px;cursor:pointer;margin-top:6px}
+button.add:active{transform:translateY(1px)}
+.foot{color:var(--muted);font-size:13px;line-height:1.55;padding:6px 4px}
+.foot b{color:var(--text)}
+.pill{display:inline-block;background:#e8f5ec;color:var(--ok);border-radius:6px;
+  padding:1px 8px;font-size:13px;font-weight:600}
+.ded-grid{display:grid;grid-template-columns:1fr 110px;gap:8px 12px;align-items:center;margin-top:6px}
+.ded-grid span{font-size:14.5px}
+.ded-grid input{padding:8px 10px;font-size:15px}
+.datebtn{display:block;width:100%;padding:11px 12px;font:inherit;font-size:16px;text-align:left;
+  background:#fff;border:1px solid var(--line);border-radius:8px;cursor:pointer;color:var(--muted)}
+.datebtn.set{color:var(--text);font-weight:600}
+.picker{border:1px solid var(--line);border-radius:10px;background:#fff;margin-top:8px;
+  padding:10px 12px 12px;box-shadow:0 8px 24px rgba(20,22,26,.14)}
+.pk-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.pk-head span{font-family:"Barlow Condensed";font-weight:600;font-size:17px;flex:1;text-align:center;
+  text-transform:uppercase;letter-spacing:.03em}
+.pk-back,.pk-close,.pk-skip{font:inherit;background:none;border:none;cursor:pointer;color:var(--red);font-weight:600}
+.pk-close{font-size:22px;line-height:1;padding:0 4px}
+.pk-back{font-size:15px;padding:0}
+.pk-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pk-grid.months{grid-template-columns:repeat(3,1fr)}
+.pk-grid.days{grid-template-columns:repeat(7,1fr);gap:4px}
+.pk-grid button{font:inherit;font-size:15px;font-weight:500;padding:10px 2px;border:1px solid var(--line);
+  border-radius:8px;background:#fff;cursor:pointer;font-variant-numeric:tabular-nums}
+.pk-grid.days button{padding:8px 0;font-size:14px}
+.pk-grid button:active,.pk-grid button.sel{background:var(--ink);color:#fff;border-color:var(--ink)}
+.pk-skip{display:block;width:100%;text-align:center;margin-top:10px;padding:8px;border:1px dashed var(--line);border-radius:8px}
+.pk-skip[hidden],.pk-back[hidden]{display:none}
+details.mini{border-top:none;margin-top:4px;padding-top:0}
+details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding:6px 0}
+@media (max-width:460px){
+  header h1{font-size:32px}
+}
+@media (prefers-reduced-motion: reduce){ summary::before{transition:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <button type="button" class="reset" id="resetBtn">Start over</button>
+  <h1>The <span>Ballpark</span></h1>
+  <p class="tagline">estimates only&nbsp;·&nbsp;figures may drift</p>
+  <p class="award">Local 22 · 2025–2027 Act 111 Award</p>
+  <p class="privacy">Your numbers stay on your phone.</p>
+</header>
+
+<div class="result empty" id="resultPanel">
+  <div class="stripe"></div>
+  <div class="result-inner">
+    <div class="rleft">
+      <div class="label">Estimated retro — gross</div>
+      <p class="msg" id="statusMsg">Fill in the required fields to see your estimate</p>
+      <div class="sub" id="subLine"></div>
+    </div>
+    <div class="big" id="bigNum">—</div>
+  </div>
+</div>
+
+<section>
+  <h2>Step 1 <span class="req">— required</span></h2>
+  <p class="sect-note">Just your pay and your start date.</p>
+
+  <p class="group-label">Pay — one of these <span class="req-star">*</span></p>
+  <label for="salary">Current base salary
+    <span class="hint">Annual BASE salary before the award, from your latest salary letter or pay stub. Do not include Fire Premium or longevity — the calculator adds those.</span>
+  </label>
+  <input type="text" id="salary" inputmode="decimal" placeholder="e.g. $90,253" autocomplete="off">
+
+  <div class="or">or pick rank + step</div>
+  <div class="row2">
+    <div>
+      <label for="rank">Rank</label>
+      <select id="rank"><option value="">Select rank…</option></select>
+    </div>
+    <div>
+      <label for="step">Step</label>
+      <select id="step"><option value="">Step…</option></select>
+    </div>
+  </div>
+  <span class="hint" id="scaleHint"></span>
+
+  <label for="startBtn">City employment start date <span class="req-star">*</span>
+    <span class="hint">Your first day with the City — this sets longevity.</span>
+  </label>
+  <button type="button" class="datebtn" id="startBtn" aria-haspopup="dialog">Tap to pick year → month</button>
+  <input type="hidden" id="startDate">
+  <div class="picker" id="picker" hidden>
+    <div class="pk-head">
+      <button type="button" class="pk-back" id="pkBack" hidden>‹ Back</button>
+      <span id="pkTitle">Pick the year</span>
+      <button type="button" class="pk-close" id="pkClose" aria-label="Close">×</button>
+    </div>
+    <div class="pk-grid" id="pkGrid"></div>
+    <button type="button" class="pk-skip" id="pkSkip" hidden>Skip the day — use the 1st</button>
+  </div>
+  <details class="mini">
+    <summary>Not sure of the exact day?</summary>
+    <p class="hint" style="margin:4px 0 0">The 1st of the month is fine — unless your hire anniversary falls between 07/2025 and your first new-rate check. In that window the exact day decides which checks get the higher longevity bracket, so use the real day.</p>
+  </details>
+</section>
+
+<section>
+  <h2>Step 2 — optional</h2>
+  <p class="sect-note">Only fill these in if they apply to you.</p>
+
+  <details>
+    <summary>Salary changed during the retro period <span class="cnt">(step raise or promotion)</span></summary>
+    <label for="sal0725">Base salary on 07/01/2025 (if different from today)</label>
+    <input type="text" id="sal0725" inputmode="decimal" placeholder="Leave blank if unchanged" autocomplete="off">
+    <label for="chg1">First paycheck dated with the new salary
+      <span class="hint">The check date that first reflected the step or promotion.</span>
+    </label>
+    <select id="chg1" class="paydate"><option value="">—</option></select>
+    <label for="salAfter1">Base salary after that change
+      <span class="hint">Leave blank if it became the current salary in Step 1.</span>
+    </label>
+    <input type="text" id="salAfter1" inputmode="decimal" autocomplete="off">
+    <label for="chg2">Second paycheck with another new salary</label>
+    <select id="chg2" class="paydate"><option value="">—</option></select>
+    <label for="salAfter2">Base salary after the second change</label>
+    <input type="text" id="salAfter2" inputmode="decimal" autocomplete="off">
+  </details>
+
+  <details>
+    <summary>Holiday check &amp; longevity overrides</summary>
+    <label for="holTotal">2025 holiday check total (01/30/2026 stub)
+      <span class="hint" id="holHint">Suggested from your rank/step — type your real gross from the stub if it differs. Half of it gets the 3%.</span>
+    </label>
+    <input type="text" id="holTotal" inputmode="decimal" placeholder="" autocomplete="off">
+    <label for="holShare">Share of that check earned on/after 07/01/2025
+      <span class="hint">Leave blank for 50%. Enter 0 if you were not paid holiday pay.</span>
+    </label>
+    <input type="number" id="holShare" inputmode="decimal" placeholder="50" min="0" max="100">
+    <label for="longOvr">Old longevity % override
+      <span class="hint">Leave blank to use the schedule. Enter 3.8 if your pay stub shows a different old rate.</span>
+    </label>
+    <input type="number" id="longOvr" inputmode="decimal" step="0.1" placeholder="">
+  </details>
+
+  <details>
+    <summary>First check at the new rate &amp; method</summary>
+    <label for="firstNew">First regular check paid at the new award salary
+      <span class="hint">Defaults to the first check dated after today. Old-rate retro stops the check before this date. This is NOT the retro lump-sum date.</span>
+    </label>
+    <select id="firstNew"></select>
+    <label for="method">Calculation method
+      <span class="hint">Leave on Compound unless you're comparing. Compound: 3% → 4.03% → 7.15%. Flat: 3% → 4% → 7%.</span>
+    </label>
+    <select id="method"><option>Compound</option><option>Flat</option></select>
+  </details>
+</section>
+
+<section>
+  <h2>OT, comp &amp; other eligible pay</h2>
+  <p class="sect-note">One row per check dated 07/01/2025 or later. Wage dollars only — don't include the Longevity Pay line. "Other" is for acting pay, night differential, court time.</p>
+  <details id="otDetails">
+    <summary>OT / comp log <span class="cnt" id="otCount"></span></summary>
+    <div class="otrow" style="margin-bottom:2px">
+      <span class="hint" style="grid-column:1/-1">Each row: check date, then OT+comp $ · OT hours · other $</span>
+    </div>
+    <div id="otRows"></div>
+    <button class="add" id="addOt" type="button">Add a check</button>
+    <label for="otRate">OT hourly rate override
+      <span class="hint" id="otRateHint">Used only for rows entered as hours. Leave blank to price hours from the salary in effect on each check date.</span>
+    </label>
+    <input type="text" id="otRate" inputmode="decimal" placeholder="" autocomplete="off">
+  </details>
+</section>
+
+<section id="breakdownSec" hidden>
+  <h2>Breakdown of the estimate</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Period</th><th class="num">Raise</th><th class="num">Long.</th><th class="num">Checks</th><th class="num">Retro</th></tr></thead>
+    <tbody id="bkBody"></tbody>
+  </table></div>
+  <p class="hint" style="margin-top:10px" id="lastCheckLine"></p>
+</section>
+
+<section id="stubSec" hidden>
+  <h2>Check it against your current pay stub</h2>
+  <p class="sect-note">Your regular biweekly check rebuilt from the inputs above, on the old longevity schedule as of today. If these match your latest stub, the retro math is using the right salary. Payroll rounds hourly rates, so expect pennies of difference.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Earnings line</th><th class="num">Hours</th><th class="num">Amount</th></tr></thead>
+    <tbody id="stubBody"></tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2>Estimated take-home</h2>
+  <p class="sect-note">Rough only — actual withholding depends on the City's payroll method, your W-4, and year-to-date wages. Retro is usually taxed as <b>supplemental pay</b>: many payrolls withhold federal at a flat 22% (the default below), so the check can look smaller than the gross number suggests. Over-withholding evens out when you file. Rates are editable.</p>
+  <details>
+    <summary>Deduction rates <span class="cnt" id="dedTotal"></span></summary>
+    <div class="ded-grid">
+      <span>Federal withholding (supplemental flat rate)</span><input type="number" step="0.1" id="d_fed" value="22">
+      <span>Social Security <span class="hint" style="display:inline">— Philadelphia uniformed members are typically not in Social Security. Enter 6.2 only if your stub shows an OASDI / Social Security line.</span></span><input type="number" step="0.1" id="d_ss" value="0">
+      <span>Medicare</span><input type="number" step="0.01" id="d_med" value="1.45">
+      <span>Pennsylvania income tax</span><input type="number" step="0.01" id="d_pa" value="3.07">
+      <span>Philadelphia wage tax <span class="hint" style="display:inline">— resident rate; non-residents enter 3.425</span></span><input type="number" step="0.001" id="d_phl" value="3.735">
+      <span>Pension contribution <span class="hint" style="display:inline">— retro base pay is usually pensionable. Enter the pension % from your pay stub; don't leave 0 unless your stub shows no pension line.</span></span><input type="number" step="0.1" id="d_pen" value="0">
+    </div>
+  </details>
+</section>
+
+<div class="foot">
+  <p><b>What this does not cover:</b> partial or prorated checks, unpaid leave, retirements mid-period, and any pay line not entered in the OT log. Payroll may prorate boundary checks or treat holiday hours differently. City service time controls longevity.</p>
+  <p>Everything is <b>gross pay before taxes</b> unless labeled otherwise. Treat the result as an estimate, not a promise — payroll's number is the real one.</p>
+  <p>Wage and longevity figures: IAFF Local 22 – City of Philadelphia Act 111 Award, June 26, 2026, ¶¶2–5.</p>
+</div>
+</div>
+
+<script>
+// Local 22 Retro Pay Estimator engine — direct port of Estimator_Retro.xlsx
+// All dates are 'YYYY-MM-DD' strings internally, compared lexically (safe for ISO).
+
+const C = {
+  ANNUAL_HOURS: 2192,
+  REG_HOURS: 84,
+  PREM_HOURS: 8.4,
+  PREM_RATE: 1.05,
+  OT_MULT: 1.5,
+  // Once the City announces the real first-new-rate check date, set it here
+  // (e.g. '2026-10-16') so everyone gets the same default instead of
+  // "first check after today", which creeps forward every two weeks.
+  IMPLEMENTATION_DATE: null,
+  AWARD_START: '2025-07-01',
+  STEP2_DATE: '2026-01-01',
+  STEP3_DATE: '2026-07-01',
+  RAISES: { r1: 0.03, r2: 0.01, r3: 0.03 },
+  HOLIDAY_HOURS: 124,
+  HOLIDAY_SHARE: 0.5,
+  OLD_LONG: [[0,0],[3,0.033],[5,0.038],[10,0.045],[15,0.052],[20,0.057],[25,0.063],[30,0.068]],
+  AWARD_LONG: [[0,0],[3,0.043],[5,0.048],[10,0.055],[15,0.062],[20,0.067],[25,0.073],[30,0.078]],
+  BRACKET_YEARS: [3,5,10,15,20,25,30],
+  DEDUCT_DEFAULTS: { fed: 0.22, ss: 0.062, medicare: 0.0145, pa: 0.0307, philly: 0.03735, pension: 0 },
+};
+
+// Pay dates: biweekly from 2025-07-11 through 2028-01-07 (66 checks, matches Pay Dates tab)
+const PAY_DATES = (() => {
+  const out = [];
+  let d = new Date(Date.UTC(2025, 6, 11));
+  const end = Date.UTC(2028, 0, 7);
+  while (d.getTime() <= end) {
+    out.push(d.toISOString().slice(0, 10));
+    d = new Date(d.getTime() + 14 * 86400000);
+  }
+  // Workbook has one hand-edited date: 11/26/2025 instead of 11/28/2025 (Thanksgiving week early check)
+  const i = out.indexOf('2025-11-28');
+  if (i !== -1) out[i] = '2025-11-26';
+  return out;
+})();
+
+// Pre-award base pay scale (Pay Scale!B5:G19). null = no such step for the rank.
+const SCALE = {
+  'FIREFIGHTER':                 [64982, 69492, 75814, 81227, 86643, 90253],
+  'EMERGENCY MEDICAL TECH':      [54155, 57911, 63177, 67687, 72203, 75212],
+  'FIRE SERV PARAMEDIC':         [64982, 76441, 83396, 89350, 95309, 99276],
+  'FIRE BOAT ENGINEER':          [null, 76441, 83396, 89350, 95305, 99278],
+  'FIRE BOAT PILOT':             [null, 97747, 99859, 101985, null, null],
+  'FIRE LIEUTENANT':             [null, 98611, 100744, 102887, null, null],
+  'FIRE PARA LIEUT':             [null, 98611, 100744, 102887, null, null],
+  'FIRE CAPTAIN':                [null, 112417, 114849, 117290, null, null],
+  'FIRE PARA CAPT':              [null, 112417, 114849, 117290, null, null],
+  'FSP INFECTION CONTROL OFF.':  [null, 112417, 114849, 117290, null, null],
+  'FIRE BATTALION CHIEF':        [null, 130405, 133226, 136058, null, null],
+  'FIRE PARA BATTALION CHIEF':   [null, 130405, 133226, 136058, null, null],
+  'FIRE DEPUTY CHIEF':           [null, 148660, 151875, 155106, null, null],
+  'FIRE PARA DEPUTY CHIEF':      [null, 148660, 151875, 155106, null, null],
+  'ASSISTANT FIRE CHIEF':        [null, 169474, 173139, 176820, null, null],
+};
+
+// Paramedic-series award scale effective 07/01/2026 (Pay Scale!B31:G35)
+const PARA_SCALE = {
+  'FIRE SERV PARAMEDIC':       [72285, 85033, 92770, 99393, 106021, 110434],
+  'FIRE PARA LIEUT':           [null, 109695, 112067, 114452, null, null],
+  'FIRE PARA CAPT':            [null, 122858, 125515, 128186, null, null],
+  'FIRE PARA BATTALION CHIEF': [null, 138830, 141832, 144850, null, null],
+  'FIRE PARA DEPUTY CHIEF':    [null, 158266, 161688, 165130, null, null],
+};
+
+// Flat lookup "rank|pre-award salary" -> award salary (ParaKey / ParaAwardCol)
+const PARA_KEY = (() => {
+  const m = {};
+  for (const rank of Object.keys(PARA_SCALE)) {
+    const pre = SCALE[rank], post = PARA_SCALE[rank];
+    for (let i = 0; i < 6; i++) {
+      if (pre[i] != null && post[i] != null) m[rank + '|' + pre[i]] = post[i];
+    }
+  }
+  return m;
+})();
+
+const PARA_RANKS = Object.keys(PARA_SCALE);
+
+// ---- helpers ----
+function iso(y, m, d) {
+  return String(y).padStart(4, '0') + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+}
+function parts(s) { const [y, m, d] = s.split('-').map(Number); return { y, m, d }; }
+function daysInMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+// Whole years of service from start to asOf (Excel anniversary logic)
+function yearsCompleted(start, asOf) {
+  const s = parts(start), a = parts(asOf);
+  let yrs = a.y - s.y;
+  // If this year's anniversary (clamped like DATE() would roll — Excel DATE(y,m,d) rolls, but
+  // start dates come from real dates so m/d are always valid) falls after asOf, subtract 1.
+  if (iso(a.y, s.m, s.d) > asOf) yrs -= 1;
+  return Math.max(0, yrs);
+}
+function vlookupApprox(table, val) {
+  let out = table[0][1];
+  for (const [k, v] of table) { if (k <= val) out = v; else break; }
+  return out;
+}
+function raiseFactors(method) {
+  const { r1, r2, r3 } = C.RAISES;
+  if (method === 'Flat') return { f1: 1 + r1, f2: 1 + r1 + r2, f3: 1 + r1 + r2 + r3 };
+  return { f1: 1 + r1, f2: (1 + r1) * (1 + r2), f3: (1 + r1) * (1 + r2) * (1 + r3) };
+}
+
+// ---- main calculation ----
+// inputs: {
+//   typedSalary:number|null, rank:string|'', step:number|null(1-6),
+//   startDate:'YYYY-MM-DD'|null,
+//   sal0725:number|null, changeDate1:string|null, salAfter1:number|null,
+//   changeDate2:string|null, salAfter2:number|null,
+//   oldLongOverride:number|null (3.8 or 0.038 both accepted),
+//   holidayTotal:number|null (override of suggestion), holidayShareOverride:number|null,
+//   firstNewCheck:string|null (default computed), method:'Compound'|'Flat',
+//   otRows:[{date,wage,hours,other}], otRateOverride:number|null,
+//   deduct:{fed,ss,medicare,pa,philly,pension}, today:'YYYY-MM-DD'
+// }
+function calculate(inp) {
+  const today = inp.today;
+  const { f1, f2, f3 } = raiseFactors(inp.method || 'Compound');
+
+  // B13 base salary used
+  let scaleSal = null;
+  if (inp.rank && inp.step) {
+    const row = SCALE[inp.rank];
+    scaleSal = row ? row[inp.step - 1] : null;
+  }
+  const baseSal = inp.typedSalary != null ? inp.typedSalary : scaleSal; // typed wins
+
+  // B43 para award salary (only from rank/step pick)
+  let paraSal = null;
+  if (inp.rank && inp.step && PARA_RANKS.includes(inp.rank)) {
+    const row = PARA_SCALE[inp.rank];
+    paraSal = row ? row[inp.step - 1] : null;
+  }
+
+  const startDate = inp.startDate || null;
+
+  // B25 first regular check at new award salary (default: first check strictly after today)
+  let firstNew = inp.firstNewCheck || null;
+  if (!firstNew) firstNew = C.IMPLEMENTATION_DATE || PAY_DATES.find(d => d > today) || null;
+
+  // B42 input check
+  let status = 'OK';
+  const d1 = inp.changeDate1, d2 = inp.changeDate2;
+  if (baseSal == null || !startDate) status = 'Fill in the required fields to see your estimate';
+  else if (!firstNew) status = 'Enter the first regular check paid at the new award salary.';
+  else if (
+    (inp.sal0725 != null && !d1 && inp.sal0725 !== baseSal) ||
+    (d1 && inp.sal0725 == null) ||
+    (inp.salAfter1 != null && !d1) ||
+    (d2 && (!d1 || d2 <= d1)) ||
+    (inp.salAfter2 != null && !d2) ||
+    (d1 && (d1 < C.AWARD_START || d1 >= firstNew)) ||
+    (d2 && (d2 < C.AWARD_START || d2 >= firstNew))
+  ) status = 'Check the salary-change boxes: dates must be in order and fall between 07/01/2025 and the first new-salary check.';
+  else if (startDate >= firstNew) status = 'City start date is after the retro period — no retro pay is due.';
+
+  // B29/B30/B31 salary schedule
+  const sal0 = baseSal == null ? null : (inp.sal0725 != null ? inp.sal0725 : baseSal);
+  const sal1 = d1 ? (inp.salAfter1 != null ? inp.salAfter1 : baseSal) : null;
+  const sal2 = d2 ? (inp.salAfter2 != null ? inp.salAfter2 : baseSal) : null;
+  const salaryAt = d => (d2 && d >= d2) ? sal2 : (d1 && d >= d1) ? sal1 : sal0;
+
+  // Longevity overrides / schedule
+  const ovr = inp.oldLongOverride == null ? null : (inp.oldLongOverride < 1 ? inp.oldLongOverride : inp.oldLongOverride / 100);
+
+  let out = { status, firstNew, baseSal, paraSal, scaleSal };
+  if (status !== 'OK') return out;
+
+  const sp = parts(startDate);
+  // B32 years at Step2Date; B33 old longevity at award start; B34 award longevity at Step2Date
+  const yearsAtStep2 = yearsCompleted(startDate, C.STEP2_DATE);
+  const oldLongAtStart = ovr != null ? ovr : vlookupApprox(C.OLD_LONG, yearsCompleted(startDate, C.AWARD_START));
+  const awardLongAtStep2 = vlookupApprox(C.AWARD_LONG, yearsAtStep2);
+
+  // B35 anniversary inside retro period
+  let anniv = null;
+  const a25 = iso(2025, sp.m, sp.d), a26 = iso(2026, sp.m, sp.d);
+  if (a25 >= C.AWARD_START && C.BRACKET_YEARS.includes(2025 - sp.y)) anniv = a25;
+  else if (a26 < firstNew && C.BRACKET_YEARS.includes(2026 - sp.y)) anniv = a26;
+  const oldAfterAnniv = anniv ? vlookupApprox(C.OLD_LONG, parts(anniv).y - sp.y) : null;   // B36
+  const awardAfterAnniv = anniv ? vlookupApprox(C.AWARD_LONG, parts(anniv).y - sp.y) : null; // B37
+
+  // B38/B39 holiday
+  const hired2026 = startDate >= '2026-01-01';
+  const holidaySuggested = (sal0 == null || hired2026) ? null
+    : round2(sal0 / C.ANNUAL_HOURS * C.HOLIDAY_HOURS * (C.PREM_RATE + oldLongAtStart));
+  const holidayTotal = inp.holidayTotal != null ? inp.holidayTotal : holidaySuggested;
+  let holidayShare;
+  if (hired2026) holidayShare = 0;
+  else if (inp.holidayShareOverride != null) holidayShare = inp.holidayShareOverride <= 1 ? inp.holidayShareOverride : inp.holidayShareOverride / 100;
+  else holidayShare = C.HOLIDAY_SHARE;
+  const holidayEligible = holidayTotal == null ? 0 : holidayTotal * holidayShare; // B39
+  const holidayRetro = holidayEligible * (f1 - 1); // F49
+
+  // ---- per-check engine (Calc Detail) ----
+  const checks = [];
+  for (const d of PAY_DATES) {
+    const counted = d >= C.AWARD_START && d >= startDate && d < firstNew;
+    if (!counted) { checks.push({ date: d, counted: 0, retro: 0 }); continue; }
+    const sal = salaryAt(d);
+    // raise factor
+    let rf;
+    if (d >= C.STEP3_DATE) {
+      if (paraSal != null && sal != null && sal > 0) {
+        const hit = PARA_KEY[inp.rank + '|' + sal];
+        rf = (hit != null ? hit : paraSal) / sal;
+      } else rf = f3;
+    } else rf = d >= C.STEP2_DATE ? f2 : f1;
+    // longevity
+    const yrs = yearsCompleted(startDate, d);
+    let oldL;
+    if (ovr == null) oldL = vlookupApprox(C.OLD_LONG, yrs);
+    else oldL = (anniv && d >= anniv) ? vlookupApprox(C.OLD_LONG, yrs) : oldLongAtStart;
+    const awardL = d < C.STEP2_DATE ? oldL : vlookupApprox(C.AWARD_LONG, yrs);
+    const retro = sal / C.ANNUAL_HOURS * (C.REG_HOURS + C.PREM_RATE * C.PREM_HOURS) * (rf * (1 + awardL) - (1 + oldL));
+    checks.push({ date: d, counted: 1, salary: sal, rf, yrs, oldL, awardL, retro });
+  }
+  const counted = checks.filter(c => c.counted);
+
+  // ---- OT & Comp rows ----
+  let otTotal = 0;
+  const otDetail = [];
+  for (const r of (inp.otRows || [])) {
+    if (!r.date) continue;
+    if (r.date < C.AWARD_START || r.date >= firstNew) { otDetail.push({ ...r, raisePct: 0, retro: 0 }); continue; }
+    const sal = salaryAt(r.date);
+    let e; // raise fraction
+    if (r.date >= C.STEP3_DATE) {
+      if (paraSal != null && sal != null && sal > 0) {
+        const hit = PARA_KEY[inp.rank + '|' + sal];
+        e = (hit != null ? hit : paraSal) / sal - 1;
+      } else e = f3 - 1;
+    } else e = (r.date >= C.STEP2_DATE ? f2 : f1) - 1;
+    const otRate = inp.otRateOverride != null ? inp.otRateOverride
+      : sal / C.ANNUAL_HOURS * C.PREM_RATE * C.OT_MULT;
+    const base = (r.wage || 0) + (r.hours ? r.hours * otRate : 0) + (r.other || 0);
+    const oldAtD = (anniv && r.date >= anniv) ? oldAfterAnniv : oldLongAtStart;
+    const awdAtD = r.date < C.STEP2_DATE
+      ? oldAtD
+      : ((anniv && r.date >= anniv) ? awardAfterAnniv : awardLongAtStep2);
+    const retro = base * ((1 + e) * (1 + awdAtD) - (1 + oldAtD));
+    otTotal += retro;
+    otDetail.push({ ...r, raisePct: e, retro });
+  }
+
+  // ---- breakdown rows (F46:F50) ----
+  const sumBetween = (a, b) => counted.filter(c => c.date >= a && c.date < b).reduce((s, c) => s + c.retro, 0);
+  const cntBetween = (a, b) => counted.filter(c => c.date >= a && c.date < b).length;
+  const p1 = { label: 'Jul – Dec 2025', raise: f1 - 1, n: cntBetween(C.AWARD_START, C.STEP2_DATE), retro: sumBetween(C.AWARD_START, C.STEP2_DATE) };
+  const p2 = { label: 'Jan – Jun 2026', raise: f2 - 1, n: cntBetween(C.STEP2_DATE, C.STEP3_DATE), retro: sumBetween(C.STEP2_DATE, C.STEP3_DATE) };
+  const p3raise = (paraSal != null && sal0 != null) ? paraSal / sal0 - 1 : f3 - 1;
+  const p3 = { label: 'Jul 2026 → new rate', raise: p3raise, n: cntBetween(C.STEP3_DATE, firstNew), retro: sumBetween(C.STEP3_DATE, firstNew) };
+  // longevity display strings
+  const fmtPct = x => (x * 100).toFixed(1) + '%';
+  p1.long = (anniv && anniv >= C.AWARD_START && anniv < C.STEP2_DATE) ? fmtPct(oldLongAtStart) + ' → ' + fmtPct(oldAfterAnniv) : fmtPct(oldLongAtStart);
+  const l2base = (anniv && anniv < C.STEP2_DATE) ? awardAfterAnniv : awardLongAtStep2;
+  p2.long = (anniv && anniv >= C.STEP2_DATE && anniv < C.STEP3_DATE) ? fmtPct(l2base) + ' → ' + fmtPct(awardAfterAnniv) : fmtPct(l2base);
+  const l3base = (anniv && anniv < C.STEP3_DATE) ? awardAfterAnniv : awardLongAtStep2;
+  p3.long = (anniv && anniv >= C.STEP3_DATE && anniv < firstNew) ? fmtPct(l3base) + ' → ' + fmtPct(awardAfterAnniv) : fmtPct(l3base);
+
+  const gross = p1.retro + p2.retro + p3.retro + holidayRetro + otTotal; // F51
+  const ded = inp.deduct || C.DEDUCT_DEFAULTS;
+  const dedRate = ded.fed + ded.ss + ded.medicare + ded.pa + ded.philly + ded.pension;
+  const takeHome = gross * (1 - dedRate);
+
+  // stub check (uses today's schedule)
+  const yrsToday = yearsCompleted(startDate, today);
+  const stubLong = ovr != null ? ovr : vlookupApprox(C.OLD_LONG, yrsToday);
+  const stubReg = baseSal / C.ANNUAL_HOURS * C.REG_HOURS;
+  const stubPrem = baseSal / C.ANNUAL_HOURS * C.PREM_RATE * C.PREM_HOURS;
+  const stubLongAmt = (stubReg + stubPrem) * stubLong;
+
+  const lastOldCheck = counted.length ? counted[counted.length - 1].date : null;
+
+  return {
+    ...out, status: 'OK',
+    gross, takeHome, dedRate,
+    countedChecks: counted.length, lastOldCheck,
+    periods: [p1, p2, p3],
+    holiday: { suggested: holidaySuggested, total: holidayTotal, share: holidayShare, eligible: holidayEligible, retro: holidayRetro, raise: f1 - 1 },
+    otTotal, otDetail,
+    anniv, oldLongAtStart, awardLongAtStep2, oldAfterAnniv, awardAfterAnniv, yearsAtStep2,
+    stub: { reg: stubReg, prem: stubPrem, longPct: stubLong, longAmt: stubLongAmt, gross: stubReg + stubPrem + stubLongAmt },
+    checks,
+  };
+}
+function round2(x) { return Math.round(x * 100) / 100; }
+
+
+
+
+// ---------- UI wiring ----------
+const $ = id => document.getElementById(id);
+const fmt$ = x => x == null ? '—' : x.toLocaleString('en-US',{style:'currency',currency:'USD'});
+const todayISO = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+// populate rank select
+for (const r of Object.keys(SCALE)) {
+  const o = document.createElement('option'); o.value = o.textContent = r; $('rank').appendChild(o);
+}
+function refreshSteps(){
+  const rank = $('rank').value, cur = $('step').value;
+  $('step').innerHTML = '<option value="">Step…</option>';
+  if (rank) {
+    SCALE[rank].forEach((v,i)=>{ if(v!=null){ const o=document.createElement('option');
+      o.value=i+1; o.textContent='Step '+(i+1); $('step').appendChild(o);} });
+    if ([...$('step').options].some(o=>o.value===cur)) $('step').value = cur;
+  }
+}
+// populate future pay-date select
+function refreshFirstNew(){
+  const t = todayISO(), sel = $('firstNew'), keep = sel.value;
+  sel.innerHTML='';
+  const future = PAY_DATES.filter(d=>d>t);
+  for (const d of future){ const o=document.createElement('option'); o.value=d;
+    const [y,m,dd]=d.split('-'); o.textContent=`${m}/${dd}/${y}`; sel.appendChild(o); }
+  sel.value = future.includes(keep) ? keep : (future[0]||'');
+}
+refreshFirstNew();
+
+// fill the salary-change selects with real check dates in the retro window
+const fmtDate = d => { const [y,m,dd]=d.split('-'); return `${m}/${dd}/${y}`; };
+for (const id of ['chg1','chg2']){
+  const sel = $(id);
+  for (const d of PAY_DATES.filter(d=>d>='2025-07-01')){
+    const o=document.createElement('option'); o.value=d; o.textContent=fmtDate(d); sel.appendChild(o);
+  }
+}
+
+// OT rows
+function addOtRow(vals){
+  const div = document.createElement('div'); div.className='otrow';
+  const opts = '<option value="">date…</option>'+PAY_DATES.filter(d=>d>='2025-07-01').map(d=>`<option value="${d}">${fmtDate(d)}</option>`).join('');
+  div.innerHTML = `<select data-k="date">${opts}</select><input type="text" inputmode="decimal" data-k="wage" placeholder="$" autocomplete="off">
+    <input type="number" inputmode="decimal" data-k="hours" placeholder="hrs"><input type="text" inputmode="decimal" data-k="other" placeholder="$" autocomplete="off">
+    <button class="del" type="button" aria-label="Remove row">×</button><div class="otret"></div>`;
+  if (vals) for (const inp of div.querySelectorAll('input,select')) inp.value = vals[inp.dataset.k] ?? '';
+  div.querySelector('.del').onclick = ()=>{ div.remove(); recalc(); };
+  div.querySelectorAll('input,select').forEach(i=>i.addEventListener('input', recalc));
+  $('otRows').appendChild(div);
+}
+$('addOt').onclick = ()=>{ addOtRow(); $('otDetails').open = true; };
+
+const cleanNum = v => { const s = String(v).replace(/[$,\s]/g,''); if(s==='') return null; const n = Number(s); return isNaN(n) ? null : n; };
+const num = id => cleanNum($(id).value);
+const dat = id => $(id).value || null;
+
+function gatherInputs(){
+  const otRows = [...$('otRows').children].map(div=>{
+    const g = k => { const el = div.querySelector(`[data-k=${k}]`); const v = el.value.trim(); return v===''?null:(k==='date'?v:cleanNum(v)); };
+    return { date:g('date'), wage:g('wage'), hours:g('hours'), other:g('other'), _div:div };
+  });
+  return {
+    typedSalary: num('salary'),
+    rank: $('rank').value, step: $('step').value ? Number($('step').value) : null,
+    startDate: dat('startDate'),
+    sal0725: num('sal0725'), changeDate1: dat('chg1'), salAfter1: num('salAfter1'),
+    changeDate2: dat('chg2'), salAfter2: num('salAfter2'),
+    oldLongOverride: num('longOvr'),
+    holidayTotal: num('holTotal'), holidayShareOverride: num('holShare'),
+    firstNewCheck: $('firstNew').value || null,
+    method: $('method').value,
+    otRows, otRateOverride: num('otRate'),
+    deduct: { fed:(num('d_fed')??0)/100, ss:(num('d_ss')??0)/100, medicare:(num('d_med')??0)/100,
+              pa:(num('d_pa')??0)/100, philly:(num('d_phl')??0)/100, pension:(num('d_pen')??0)/100 },
+    today: todayISO(),
+  };
+}
+
+function recalc(){
+  const inp = gatherInputs();
+  const r = calculate(inp);
+
+  // rank/step helper hint
+  if (r.scaleSal != null && inp.typedSalary == null)
+    $('scaleHint').textContent = `Using ${fmt$(r.scaleSal)} from the pay scale.`;
+  else if (r.scaleSal != null && inp.typedSalary != null)
+    $('scaleHint').textContent = `Your typed salary (${fmt$(inp.typedSalary)}) is used; the scale value is ignored.`;
+  else $('scaleHint').textContent = '';
+
+  // holiday suggestion placeholder
+  $('holTotal').placeholder = (r.status==='OK' && r.holiday && r.holiday.suggested!=null)
+    ? 'Suggested: '+r.holiday.suggested.toFixed(2) : '';
+
+  if (r.status !== 'OK'){
+    $('resultPanel').classList.add('empty');
+    $('bigNum').textContent = '—';
+    $('subLine').textContent = '';
+    $('statusMsg').textContent = r.status;
+    $('statusMsg').style.display='';
+    $('breakdownSec').hidden = true; $('stubSec').hidden = true;
+    $('otCount').textContent=''; $('dedTotal').textContent='';
+    if (r.baseSal == null)
+      $('otRateHint').textContent = 'Used only for rows entered as hours. Leave blank to price hours from the salary in effect on each check date.';
+    for (const div of $('otRows').children){ const el=div.querySelector('.otret'); if (el) el.textContent=''; }
+    return;
+  }
+  $('resultPanel').classList.remove('empty');
+  $('bigNum').textContent = fmt$(r.gross);
+  $('subLine').innerHTML = `Rough take-home: <b>${fmt$(r.takeHome)}</b>`;
+  $('statusMsg').style.display='none';
+
+  // breakdown
+  const rows = [];
+  for (const p of r.periods)
+    rows.push(`<tr><td>${p.label}</td><td class="num">${(p.raise*100).toFixed(2)}%</td><td class="num">${p.long}</td><td class="num">${p.n}</td><td class="num">${fmt$(p.retro)}</td></tr>`);
+  rows.push(`<tr><td>2025 holiday pay (after 07/01/25)</td><td class="num">${(r.holiday.raise*100).toFixed(1)}%</td><td class="num">none</td><td class="num">${r.holiday.retro>0?1:0}</td><td class="num">${fmt$(r.holiday.retro)}</td></tr>`);
+  rows.push(`<tr><td>OT / comp / other</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">${fmt$(r.otTotal)}</td></tr>`);
+  rows.push(`<tr class="total"><td colspan="4">Total retro — gross</td><td class="num">${fmt$(r.gross)}</td></tr>`);
+  rows.push(`<tr class="take"><td colspan="4">Estimated deductions (${(r.dedRate*100).toFixed(2)}%)</td><td class="num">−${fmt$(r.gross*r.dedRate)}</td></tr>`);
+  rows.push(`<tr class="take"><td colspan="4">Take-home (rough)</td><td class="num">${fmt$(r.takeHome)}</td></tr>`);
+  $('bkBody').innerHTML = rows.join('');
+  $('lastCheckLine').textContent = r.lastOldCheck
+    ? `${r.countedChecks} checks counted at the old rate. Last paycheck counted: ${r.lastOldCheck.split('-').slice(1).join('/') }/${r.lastOldCheck.slice(0,4)}.`
+    : '';
+  $('breakdownSec').hidden = false;
+
+  // stub check
+  $('stubBody').innerHTML =
+    `<tr><td>Regular</td><td class="num">84</td><td class="num">${fmt$(r.stub.reg)}</td></tr>`+
+    `<tr><td>Fire Premium</td><td class="num">8.4</td><td class="num">${fmt$(r.stub.prem)}</td></tr>`+
+    `<tr><td>Longevity Pay (old schedule, today)</td><td class="num">${(r.stub.longPct*100).toFixed(1)}%</td><td class="num">${fmt$(r.stub.longAmt)}</td></tr>`+
+    `<tr class="total"><td colspan="2">Gross current earnings</td><td class="num">${fmt$(r.stub.gross)}</td></tr>`;
+  $('stubSec').hidden = false;
+
+  // OT per-row feedback + count
+  let otN = 0;
+  for (const row of inp.otRows){
+    const det = r.otDetail.find(d=>d._div===row._div) || r.otDetail.find(d=>d.date===row.date);
+    const el = row._div.querySelector('.otret');
+    if (row.date && det){ otN++;
+      el.textContent = det.retro ? `raise ${(det.raisePct*100).toFixed(2)}% → retro ${fmt$(det.retro)}`
+        : (row.date < '2025-07-01' || row.date >= r.firstNew ? 'outside the retro period — not counted' : 'retro $0.00');
+    } else el.textContent='';
+  }
+  $('otCount').textContent = otN ? `(${otN} check${otN>1?'s':''} · ${fmt$(r.otTotal)})` : '';
+  $('dedTotal').textContent = `(total ${(r.dedRate*100).toFixed(2)}%)`;
+
+  // OT auto rate hint
+  if (r.baseSal != null)
+    $('otRateHint').textContent = `Automatic rate from your current salary: $${(r.baseSal/2192*1.05*1.5).toFixed(2)}/hr. Type a rate here to replace it for every row.`;
+}
+
+// ---- start-date tap-through picker (year → month → optional day) ----
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const pk = { stage:'year', y:null, m:null };
+function pkOpen(){ pk.stage='year'; pk.y=pk.m=null; pk.allYears=false; $('picker').hidden=false; pkRender(); }
+function pkClose(){ $('picker').hidden=true; }
+function pkSet(y,m,d){
+  if (!y || !m || !d) return;
+  $('startDate').value = iso(y,m,d);
+  const btn=$('startBtn'); btn.textContent = `${MONTHS[m-1]} ${d}, ${y}`; btn.classList.add('set');
+  pkClose(); recalc();
+}
+function pkRender(){
+  const g=$('pkGrid'); g.innerHTML=''; g.className='pk-grid';
+  $('pkSkip').hidden=true; $('pkBack').hidden = pk.stage==='year';
+  if (pk.stage==='year'){
+    $('pkTitle').textContent='Pick the year';
+    const lo = pk.allYears ? 1975 : 2012;
+    for(let y=2027;y>=lo;y--){ const b=document.createElement('button'); b.type='button'; b.textContent=y;
+      b.onclick=()=>{ pk.y=y; pk.stage='month'; pkRender(); }; g.appendChild(b); }
+    if (!pk.allYears){ const m=document.createElement('button'); m.type='button'; m.textContent='Earlier years…';
+      m.style.gridColumn='1/-1'; m.onclick=()=>{ pk.allYears=true; pkRender(); }; g.appendChild(m); }
+  } else if (pk.stage==='month'){
+    $('pkTitle').textContent='Pick the month · '+pk.y; g.classList.add('months');
+    MONTHS.forEach((name,i)=>{ const b=document.createElement('button'); b.type='button'; b.textContent=name.slice(0,3);
+      b.onclick=()=>{ pk.m=i+1; pk.stage='day'; pkRender(); }; g.appendChild(b); });
+  } else {
+    $('pkTitle').textContent=`Day · ${MONTHS[pk.m-1]} ${pk.y}`; g.classList.add('days');
+    const n=daysInMonth(pk.y,pk.m);
+    for(let d=1;d<=n;d++){ const b=document.createElement('button'); b.type='button'; b.textContent=d;
+      b.onclick=()=>pkSet(pk.y,pk.m,d); g.appendChild(b); }
+    $('pkSkip').hidden=false;
+  }
+}
+$('startBtn').onclick=pkOpen;
+$('pkClose').onclick=pkClose;
+$('pkBack').onclick=()=>{ pk.stage = pk.stage==='day' ? 'month' : 'year'; pkRender(); };
+$('pkSkip').onclick=()=>pkSet(pk.y,pk.m,1);
+
+function resetAll(){
+  for (const el of document.querySelectorAll('.wrap input')) el.value='';
+  $('d_fed').value=22; $('d_ss').value=0; $('d_med').value=1.45;
+  $('d_pa').value=3.07; $('d_phl').value=3.735; $('d_pen').value=0;
+  $('rank').value=''; refreshSteps(); $('step').value='';
+  $('chg1').value=''; $('chg2').value=''; $('method').value='Compound';
+  refreshFirstNew();
+  $('otRows').innerHTML='';
+  $('startDate').value='';
+  const b=$('startBtn'); b.textContent='Tap to pick year → month'; b.classList.remove('set');
+  pkClose();
+  for (const d of document.querySelectorAll('details')) d.open=false;
+  window.scrollTo({top:0});
+  recalc();
+}
+$('resetBtn').onclick=resetAll;
+
+document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input', ()=>{
+  if (el.id==='rank') refreshSteps();
+  recalc();
+}));
+recalc();
+</script>
+</body>
+</html>
