@@ -109,7 +109,7 @@ td{padding:8px 5px;border-bottom:1px solid var(--line);vertical-align:top}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.total td{border-bottom:none;border-top:2px solid var(--ink);font-weight:600}
 tr.take td{border-bottom:none;color:var(--muted)}
-.otrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:center}
+.otrow{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:center}
 .otrow select[data-k=date]{grid-column:1/-1}
 .otrow input{padding:9px 8px;font-size:14.5px}
 .otrow select{padding:9px 4px;font-size:14px}
@@ -284,7 +284,7 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
   <details id="otDetails">
     <summary>OT / comp log <span class="cnt" id="otCount"></span></summary>
     <div class="otrow" style="margin-bottom:2px">
-      <span class="hint" style="grid-column:1/-1">One row per check, with that check's totals: OT+comp $ · OT hours · other $. Picking a date starts the row at 12 hours (one shift) — worked more OT that period? Type the check's real total: 24, 36, and so on.</span>
+      <span class="hint" style="grid-column:1/-1">One row per check, with that check's totals: OT+comp $ · OT hours · other $ · medic hours. Picking a date starts the row at 12 OT hours (one shift) — worked more OT that period? Type the check's real total: 24, 36, and so on. "Medic" is the Fire MUPD line: hours detailed to a medic unit, paid at 5% of your hourly rate.</span>
     </div>
     <div id="otRows"></div>
     <button class="add" id="addOt" type="button">Add a check</button>
@@ -295,7 +295,7 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
       <button class="add" id="otMultiAdd" type="button" disabled>Tap the check dates, then add them</button>
     </div>
     <label for="otRate">OT hourly rate override
-      <span class="hint" id="otRateHint">Used only for rows entered as hours. Leave blank to price hours from the salary in effect on each check date.</span>
+      <span class="hint" id="otRateHint">Used only for OT hours (not medic hours). Leave blank to price hours from the salary in effect on each check date.</span>
     </label>
     <input type="text" id="otRate" inputmode="decimal" placeholder="" autocomplete="off">
   </details>
@@ -352,6 +352,7 @@ const C = {
   PREM_HOURS: 8.4,
   PREM_RATE: 1.05,
   OT_MULT: 1.5,
+  MUPD_RATE: 0.05,   // medic unit detail: 5% of base hourly per detailed hour
   // Once the City announces the real first-new-rate check date, set it here
   // (e.g. '2026-10-16') so everyone gets the same default instead of
   // "first check after today", which creeps forward every two weeks.
@@ -629,7 +630,8 @@ function calculate(inp) {
     } else e = (r.date >= C.STEP2_DATE ? f2 : f1) - 1;
     const otRate = inp.otRateOverride != null ? inp.otRateOverride
       : sal / C.ANNUAL_HOURS * C.PREM_RATE * C.OT_MULT;
-    const base = (r.wage || 0) + (r.hours ? r.hours * otRate : 0) + (r.other || 0);
+    const base = (r.wage || 0) + (r.hours ? r.hours * otRate : 0) + (r.other || 0)
+      + (r.mupd ? r.mupd * sal / C.ANNUAL_HOURS * C.MUPD_RATE : 0);
     const oldAtD = (anniv && r.date >= anniv) ? oldAfterAnniv : oldLongAtStart;
     const awdAtD = r.date < C.STEP2_DATE
       ? oldAtD
@@ -728,6 +730,7 @@ function addOtRow(vals){
   const opts = '<option value="">date…</option>'+PAY_DATES.filter(d=>d>='2025-07-01').map(d=>`<option value="${d}">${fmtDate(d)}</option>`).join('');
   div.innerHTML = `<select data-k="date">${opts}</select><input type="text" inputmode="decimal" data-k="wage" placeholder="$" autocomplete="off">
     <input type="number" inputmode="decimal" data-k="hours" placeholder="hrs"><input type="text" inputmode="decimal" data-k="other" placeholder="$" autocomplete="off">
+    <input type="number" inputmode="decimal" data-k="mupd" placeholder="medic" title="Fire MUPD hours — detailed to a medic unit">
     <button class="del" type="button" aria-label="Remove row">×</button><div class="otret"></div>`;
   if (vals) for (const inp of div.querySelectorAll('input,select')) inp.value = vals[inp.dataset.k] ?? '';
   div.querySelector('.del').onclick = ()=>{ div.remove(); recalc(); };
@@ -737,7 +740,7 @@ function addOtRow(vals){
   hoursInp.addEventListener('input', ()=>{ hoursInp.dataset.manual = '1'; });
   div.querySelector('[data-k=date]').addEventListener('change', ()=>{
     const empty = k => div.querySelector(`[data-k=${k}]`).value.trim()==='';
-    if (empty('hours') && empty('wage') && empty('other') && !hoursInp.dataset.manual){
+    if (empty('hours') && empty('wage') && empty('other') && empty('mupd') && !hoursInp.dataset.manual){
       hoursInp.value = 12; recalc();
     }
   });
@@ -786,7 +789,7 @@ const dat = id => $(id).value || null;
 function gatherInputs(){
   const otRows = [...$('otRows').children].map(div=>{
     const g = k => { const el = div.querySelector(`[data-k=${k}]`); const v = el.value.trim(); return v===''?null:(k==='date'?v:cleanNum(v)); };
-    return { date:g('date'), wage:g('wage'), hours:g('hours'), other:g('other'), _div:div };
+    return { date:g('date'), wage:g('wage'), hours:g('hours'), other:g('other'), mupd:g('mupd'), _div:div };
   });
   return {
     typedSalary: num('salary'),
