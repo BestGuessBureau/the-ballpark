@@ -789,7 +789,11 @@ function addOtRow(vals, collapsed){
     if (inp.type === 'checkbox') continue;
     inp.value = vals[inp.dataset.k] ?? '';
   }
-  div.querySelector('.otsum').onclick = ()=>{ div.classList.toggle('closed'); };
+  div.querySelector('.otsum').onclick = ()=>{
+    // collapsing a completely empty row just removes it
+    if (!div.classList.contains('closed') && otRowIsEmpty(div)){ div.remove(); recalc(); return; }
+    div.classList.toggle('closed');
+  };
   div.querySelector('.del').onclick = ()=>{ div.remove(); recalc(); };
   div.querySelectorAll('input,select').forEach(i=>i.addEventListener('input', ()=>{ updateOtSummary(div); recalc(); }));
   // medic unit detail: checkbox reveals the hours box, starting at one shift
@@ -814,13 +818,32 @@ function addOtRow(vals, collapsed){
   updateOtSummary(div);
   $('otRows').appendChild(div);
 }
-$('addOt').onclick = ()=>{ addOtRow(); $('otDetails').open = true; };
+function otRowIsEmpty(div){
+  return [...div.querySelectorAll('input,select')].every(el =>
+    el.type==='checkbox' ? !el.checked : el.value.trim()==='');
+}
+// drop abandoned blank rows (no date, no values) so they never pile up
+function pruneEmptyOtRows(except){
+  for (const div of [...$('otRows').children])
+    if (div!==except && otRowIsEmpty(div)) div.remove();
+}
+// keep the list in paycheck order; rows without a date sink to the bottom
+function sortOtRows(){
+  const rows = [...$('otRows').children];
+  rows.sort((a,b)=>{
+    const da=a.querySelector('[data-k=date]').value, db=b.querySelector('[data-k=date]').value;
+    return (da||'9999') < (db||'9999') ? -1 : 1;
+  });
+  for (const r of rows) $('otRows').appendChild(r);
+}
+$('addOt').onclick = ()=>{ pruneEmptyOtRows(); addOtRow(); $('otDetails').open = true; };
 
 // paycheck picker: tap every OT check, pick the default hours, add them all
 const otMultiPanel = $('otMultiPanel');
 function closeOtPanel(){ otMultiPanel.hidden = true; document.body.classList.remove('picker-open'); }
 $('addOtMulti').onclick = ()=>{
   if (!otMultiPanel.hidden){ closeOtPanel(); return; }
+  pruneEmptyOtRows();
   buildOtMulti(); otMultiPanel.hidden = false; $('otDetails').open = true;
   document.body.classList.add('picker-open');
 };
@@ -862,6 +885,7 @@ function updateOtMultiBtn(){
 $('otMultiAdd').onclick = ()=>{
   const h = otDefHours();
   for (const b of $('otMultiGrid').querySelectorAll('.sel')) addOtRow({date:b.dataset.date, hours:h}, true);
+  pruneEmptyOtRows(); sortOtRows();
   closeOtPanel(); recalc();
 };
 
