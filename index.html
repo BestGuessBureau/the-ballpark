@@ -71,6 +71,8 @@ header .privacy{margin:2px 0 0;color:var(--muted);font-size:13px}
 .result.empty .result-inner{padding:9px 16px}
 .result.empty .label,.result.empty .sub,.result.empty .big{display:none}
 .req-star{color:var(--red);font-weight:700}
+.checkline{display:block;font-weight:600}
+.checkline input{width:auto;margin-right:8px;transform:scale(1.25);accent-color:var(--red)}
 
 section{background:var(--panel);border:1px solid var(--line);border-radius:10px;
   padding:16px;margin-bottom:14px}
@@ -264,6 +266,9 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
       <span class="hint">Leave on Compound unless you're comparing. Compound: 3% → 4.03% → 7.15%. Flat: 3% → 4% → 7%.</span>
     </label>
     <select id="method"><option>Compound</option><option>Flat</option></select>
+    <label class="checkline"><input type="checkbox" id="prorate" checked> Prorate boundary checks
+      <span class="hint">Raises take effect mid-pay-period, so the check paid right after each raise date covers days at both rates. Leave this on to split those checks day by day (usually a slightly lower, more accurate estimate). Turn it off to count whole checks by check date.</span>
+    </label>
   </details>
 </section>
 
@@ -351,20 +356,25 @@ const C = {
   DEDUCT_DEFAULTS: { fed: 0.22, ss: 0.062, medicare: 0.0145, pa: 0.0307, philly: 0.03735, pension: 0 },
 };
 
-// Pay dates: biweekly from 2025-07-11 through 2028-01-07 (66 checks, matches Pay Dates tab)
-const PAY_DATES = (() => {
+// Pay schedule: biweekly checks 2025-07-11 through 2028-01-07 (66 checks, matches Pay Dates tab).
+// Each check covers the 14-day period ending 5 days before its canonical date
+// (stub: Payperiod Ending 2026/08/30 -> Date Payable 2026/09/04).
+const DAY = 86400000;
+const PAY_SCHEDULE = (() => {
   const out = [];
   let d = new Date(Date.UTC(2025, 6, 11));
   const end = Date.UTC(2028, 0, 7);
   while (d.getTime() <= end) {
-    out.push(d.toISOString().slice(0, 10));
-    d = new Date(d.getTime() + 14 * 86400000);
+    const canonical = d.toISOString().slice(0, 10);
+    const periodEnd = new Date(d.getTime() - 5 * DAY).toISOString().slice(0, 10);
+    // Thanksgiving 2025: check paid early (11/26 instead of 11/28) but the period is unchanged
+    const pay = canonical === '2025-11-28' ? '2025-11-26' : canonical;
+    out.push({ pay, periodEnd });
+    d = new Date(d.getTime() + 14 * DAY);
   }
-  // Workbook has one hand-edited date: 11/26/2025 instead of 11/28/2025 (Thanksgiving week early check)
-  const i = out.indexOf('2025-11-28');
-  if (i !== -1) out[i] = '2025-11-26';
   return out;
 })();
+const PAY_DATES = PAY_SCHEDULE.map(x => x.pay);
 
 // Pre-award base pay scale (Pay Scale!B5:G19). null = no such step for the rank.
 const SCALE = {
@@ -413,6 +423,8 @@ function iso(y, m, d) {
   return String(y).padStart(4, '0') + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0');
 }
 function parts(s) { const [y, m, d] = s.split('-').map(Number); return { y, m, d }; }
+function isoToMs(s) { const p = parts(s); return Date.UTC(p.y, p.m - 1, p.d); }
+function addDays(s, n) { return new Date(isoToMs(s) + n * DAY).toISOString().slice(0, 10); }
 function daysInMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
 // Whole years of service from start to asOf (Excel anniversary logic)
 function yearsCompleted(start, asOf) {
@@ -525,28 +537,67 @@ function calculate(inp) {
   const holidayEligible = holidayTotal == null ? 0 : holidayTotal * holidayShare; // B39
   const holidayRetro = holidayEligible * (f1 - 1); // F49
 
-  // ---- per-check engine (Calc Detail) ----
-  const checks = [];
-  for (const d of PAY_DATES) {
-    const counted = d >= C.AWARD_START && d >= startDate && d < firstNew;
-    if (!counted) { checks.push({ date: d, counted: 0, retro: 0 }); continue; }
-    const sal = salaryAt(d);
-    // raise factor
-    let rf;
-    if (d >= C.STEP3_DATE) {
+  // ---- per-check engine ----
+  // prorate=true (default): each check's 14 worked days are priced day by day, so a
+  // raise or longevity change landing mid-period splits that check instead of
+  // flipping it whole. prorate=false reproduces the workbook exactly (whole checks
+  // assigned by check date).
+  const prorate = inp.prorate !== false;
+  const rfAt = (t, sal) => {
+    if (t >= C.STEP3_DATE) {
       if (paraSal != null && sal != null && sal > 0) {
         const hit = PARA_KEY[inp.rank + '|' + sal];
-        rf = (hit != null ? hit : paraSal) / sal;
-      } else rf = f3;
-    } else rf = d >= C.STEP2_DATE ? f2 : f1;
-    // longevity
-    const yrs = yearsCompleted(startDate, d);
+        return (hit != null ? hit : paraSal) / sal;
+      }
+      return f3;
+    }
+    return t >= C.STEP2_DATE ? f2 : f1;
+  };
+  const longsAt = t => {
+    const yrs = yearsCompleted(startDate, t);
     let oldL;
     if (ovr == null) oldL = vlookupApprox(C.OLD_LONG, yrs);
-    else oldL = (anniv && d >= anniv) ? vlookupApprox(C.OLD_LONG, yrs) : oldLongAtStart;
-    const awardL = d < C.STEP2_DATE ? oldL : vlookupApprox(C.AWARD_LONG, yrs);
-    const retro = sal / C.ANNUAL_HOURS * (C.REG_HOURS + C.PREM_RATE * C.PREM_HOURS) * (rf * (1 + awardL) - (1 + oldL));
-    checks.push({ date: d, counted: 1, salary: sal, rf, yrs, oldL, awardL, retro });
+    else oldL = (anniv && t >= anniv) ? vlookupApprox(C.OLD_LONG, yrs) : oldLongAtStart;
+    const awardL = t < C.STEP2_DATE ? oldL : vlookupApprox(C.AWARD_LONG, yrs);
+    return { yrs, oldL, awardL };
+  };
+  const checks = [];
+  const bucket = { p1: 0, p2: 0, p3: 0 };
+  let raiseTotal = 0, longTotal = 0;
+  for (const { pay: d, periodEnd } of PAY_SCHEDULE) {
+    if (d >= firstNew) { checks.push({ date: d, counted: 0, retro: 0 }); continue; }
+    const sal = salaryAt(d);
+    const biweekly = sal == null ? 0 : sal / C.ANNUAL_HOURS * (C.REG_HOURS + C.PREM_RATE * C.PREM_HOURS);
+    if (!prorate) {
+      const counted = d >= C.AWARD_START && d >= startDate;
+      if (!counted) { checks.push({ date: d, counted: 0, retro: 0 }); continue; }
+      const rf = rfAt(d, sal);
+      const { yrs, oldL, awardL } = longsAt(d);
+      const retro = biweekly * (rf * (1 + awardL) - (1 + oldL));
+      raiseTotal += biweekly * (rf - 1) * (1 + oldL);
+      longTotal += biweekly * rf * (awardL - oldL);
+      bucket[d < C.STEP2_DATE ? 'p1' : d < C.STEP3_DATE ? 'p2' : 'p3'] += retro;
+      checks.push({ date: d, counted: 1, salary: sal, rf, yrs, oldL, awardL, retro });
+      continue;
+    }
+    // prorated: walk the 14 days of the period this check paid for
+    let retro = 0, any = false;
+    for (let k = 13; k >= 0; k--) {
+      const t = addDays(periodEnd, -k);
+      if (t < C.AWARD_START || t < startDate) continue;
+      any = true;
+      const rf = rfAt(t, sal);
+      const { oldL, awardL } = longsAt(t);
+      const dayRetro = biweekly / 14 * (rf * (1 + awardL) - (1 + oldL));
+      retro += dayRetro;
+      raiseTotal += biweekly / 14 * (rf - 1) * (1 + oldL);
+      longTotal += biweekly / 14 * rf * (awardL - oldL);
+      bucket[t < C.STEP2_DATE ? 'p1' : t < C.STEP3_DATE ? 'p2' : 'p3'] += dayRetro;
+    }
+    if (!any) { checks.push({ date: d, counted: 0, retro: 0 }); continue; }
+    const rf = rfAt(d, sal);
+    const { yrs, oldL, awardL } = longsAt(d);
+    checks.push({ date: d, counted: 1, salary: sal, rf, yrs, oldL, awardL, retro, periodEnd });
   }
   const counted = checks.filter(c => c.counted);
 
@@ -576,13 +627,12 @@ function calculate(inp) {
     otDetail.push({ ...r, raisePct: e, retro });
   }
 
-  // ---- breakdown rows (F46:F50) ----
-  const sumBetween = (a, b) => counted.filter(c => c.date >= a && c.date < b).reduce((s, c) => s + c.retro, 0);
+  // ---- breakdown rows ----
   const cntBetween = (a, b) => counted.filter(c => c.date >= a && c.date < b).length;
-  const p1 = { label: 'Jul – Dec 2025', raise: f1 - 1, n: cntBetween(C.AWARD_START, C.STEP2_DATE), retro: sumBetween(C.AWARD_START, C.STEP2_DATE) };
-  const p2 = { label: 'Jan – Jun 2026', raise: f2 - 1, n: cntBetween(C.STEP2_DATE, C.STEP3_DATE), retro: sumBetween(C.STEP2_DATE, C.STEP3_DATE) };
+  const p1 = { label: 'Jul – Dec 2025', raise: f1 - 1, n: cntBetween(C.AWARD_START, C.STEP2_DATE), retro: bucket.p1 };
+  const p2 = { label: 'Jan – Jun 2026', raise: f2 - 1, n: cntBetween(C.STEP2_DATE, C.STEP3_DATE), retro: bucket.p2 };
   const p3raise = (paraSal != null && sal0 != null) ? paraSal / sal0 - 1 : f3 - 1;
-  const p3 = { label: 'Jul 2026 → new rate', raise: p3raise, n: cntBetween(C.STEP3_DATE, firstNew), retro: sumBetween(C.STEP3_DATE, firstNew) };
+  const p3 = { label: 'Jul 2026 → new rate', raise: p3raise, n: cntBetween(C.STEP3_DATE, firstNew), retro: bucket.p3 };
   // longevity display strings
   const fmtPct = x => (x * 100).toFixed(1) + '%';
   p1.long = (anniv && anniv >= C.AWARD_START && anniv < C.STEP2_DATE) ? fmtPct(oldLongAtStart) + ' → ' + fmtPct(oldAfterAnniv) : fmtPct(oldLongAtStart);
@@ -611,7 +661,7 @@ function calculate(inp) {
     countedChecks: counted.length, lastOldCheck,
     periods: [p1, p2, p3],
     holiday: { suggested: holidaySuggested, total: holidayTotal, share: holidayShare, eligible: holidayEligible, retro: holidayRetro, raise: f1 - 1 },
-    otTotal, otDetail,
+    otTotal, otDetail, raiseTotal, longTotal, prorated: prorate,
     anniv, oldLongAtStart, awardLongAtStep2, oldAfterAnniv, awardAfterAnniv, yearsAtStep2,
     stub: { reg: stubReg, prem: stubPrem, longPct: stubLong, longAmt: stubLongAmt, gross: stubReg + stubPrem + stubLongAmt },
     checks,
@@ -692,7 +742,7 @@ function gatherInputs(){
     oldLongOverride: num('longOvr'),
     holidayTotal: num('holTotal'), holidayShareOverride: num('holShare'),
     firstNewCheck: $('firstNew').value || null,
-    method: $('method').value,
+    method: $('method').value, prorate: $('prorate').checked,
     otRows, otRateOverride: num('otRate'),
     deduct: { fed:(num('d_fed')??0)/100, ss:(num('d_ss')??0)/100, medicare:(num('d_med')??0)/100,
               pa:(num('d_pa')??0)/100, philly:(num('d_phl')??0)/100, pension:(num('d_pen')??0)/100 },
@@ -737,6 +787,7 @@ function recalc(){
   const rows = [];
   for (const p of r.periods)
     rows.push(`<tr><td>${p.label}</td><td class="num">${(p.raise*100).toFixed(2)}%</td><td class="num">${p.long}</td><td class="num">${p.n}</td><td class="num">${fmt$(p.retro)}</td></tr>`);
+  rows.push(`<tr class="take"><td colspan="4">&nbsp;&nbsp;of which — raises: ${fmt$(r.raiseTotal)} · longevity bump: ${fmt$(r.longTotal)}</td><td class="num"></td></tr>`);
   rows.push(`<tr><td>2025 holiday pay (after 07/01/25)</td><td class="num">${(r.holiday.raise*100).toFixed(1)}%</td><td class="num">none</td><td class="num">${r.holiday.retro>0?1:0}</td><td class="num">${fmt$(r.holiday.retro)}</td></tr>`);
   rows.push(`<tr><td>OT / comp / other</td><td class="num"></td><td class="num"></td><td class="num"></td><td class="num">${fmt$(r.otTotal)}</td></tr>`);
   rows.push(`<tr class="total"><td colspan="4">Total retro — gross</td><td class="num">${fmt$(r.gross)}</td></tr>`);
@@ -817,7 +868,7 @@ function resetAll(){
   $('d_fed').value=22; $('d_ss').value=0; $('d_med').value=1.45;
   $('d_pa').value=3.07; $('d_phl').value=3.735; $('d_pen').value=0;
   $('rank').value=''; refreshSteps(); $('step').value='';
-  $('chg1').value=''; $('chg2').value=''; $('method').value='Compound';
+  $('chg1').value=''; $('chg2').value=''; $('method').value='Compound'; $('prorate').checked=true;
   refreshFirstNew();
   $('otRows').innerHTML='';
   $('startDate').value='';
