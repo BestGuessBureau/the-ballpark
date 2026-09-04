@@ -1,0 +1,5 @@
+# Never publish personal documents dropped in this folder
+*.jpg
+*.jpeg
+*.heic
+*.pdf
