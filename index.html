@@ -311,9 +311,10 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
     <div id="otRows"></div>
     <button class="add" id="addOtMulti" type="button">Select OT paychecks</button>
     <button class="add alt" id="addOt" type="button">Add one paycheck</button>
+    <button class="add alt" id="addMupdMulti" type="button">5% club quick add</button>
     <div class="picker" id="otMultiPanel" hidden>
-      <div class="pk-head"><span>Every paycheck with OT</span><button type="button" class="pk-close" id="otMultiClose" aria-label="Close">×</button></div>
-      <div class="defrow"><span>OT hours per check:</span>
+      <div class="pk-head"><span id="otPickTitle">Every paycheck with OT</span><button type="button" class="pk-close" id="otMultiClose" aria-label="Close">×</button></div>
+      <div class="defrow"><span id="otDefLabel">OT hours per check:</span>
         <div class="defbtns" id="otDefBtns">
           <button type="button" data-h="12" class="on">12</button>
           <button type="button" data-h="24">24</button>
@@ -841,12 +842,23 @@ $('addOt').onclick = ()=>{ pruneEmptyOtRows(); addOtRow(); $('otDetails').open =
 // paycheck picker: tap every OT check, pick the default hours, add them all
 const otMultiPanel = $('otMultiPanel');
 function closeOtPanel(){ otMultiPanel.hidden = true; document.body.classList.remove('picker-open'); }
-$('addOtMulti').onclick = ()=>{
-  if (!otMultiPanel.hidden){ closeOtPanel(); return; }
+let otPickerMode = 'ot';   // 'ot' fills OT hours, 'mupd' fills medic detail hours
+function otRowByDate(){
+  const map = {};
+  for (const d of [...$('otRows').children]){ const v=d.querySelector('[data-k=date]').value; if (v) map[v]=d; }
+  return map;
+}
+function openOtPicker(mode){
+  if (!otMultiPanel.hidden && otPickerMode===mode){ closeOtPanel(); return; }
+  otPickerMode = mode;
+  $('otPickTitle').textContent = mode==='ot' ? 'Every paycheck with OT' : 'Every paycheck with medic detail';
+  $('otDefLabel').textContent = mode==='ot' ? 'OT hours per check:' : 'Medic hours per check:';
   pruneEmptyOtRows();
   buildOtMulti(); otMultiPanel.hidden = false; $('otDetails').open = true;
   document.body.classList.add('picker-open');
-};
+}
+$('addOtMulti').onclick = ()=>openOtPicker('ot');
+$('addMupdMulti').onclick = ()=>openOtPicker('mupd');
 $('otMultiClose').onclick = closeOtPanel;
 let otDefSel = '12';
 $('otDefBtns').addEventListener('click', e=>{
@@ -859,7 +871,15 @@ $('otDefBtns').addEventListener('click', e=>{
 $('otDefCustom').addEventListener('input', updateOtMultiBtn);
 function otDefHours(){ return otDefSel==='custom' ? (cleanNum($('otDefCustom').value) ?? 12) : Number(otDefSel); }
 function buildOtMulti(){
-  const used = new Set([...$('otRows').children].map(d=>d.querySelector('[data-k=date]').value).filter(Boolean));
+  // a date is "used" only for what this mode would fill, so a check can get
+  // OT in one pass and medic detail in another
+  const byDate = otRowByDate();
+  const used = new Set(Object.keys(byDate).filter(d=>{
+    const row = byDate[d];
+    return otPickerMode==='mupd'
+      ? row.querySelector('[data-k=mupdOn]').checked
+      : (row.querySelector('[data-k=hours]').value.trim()!=='' || row.querySelector('[data-k=wage]').value.trim()!=='');
+  }));
   // only paychecks eligible for retro: before the first check at the new rate
   const firstNew = $('firstNew').value || C.IMPLEMENTATION_DATE || PAY_DATES.find(x=>x>todayISO()) || null;
   const grid = $('otMultiGrid'); grid.innerHTML = '';
@@ -879,12 +899,24 @@ function updateOtMultiBtn(){
   const n = $('otMultiGrid').querySelectorAll('.sel').length;
   const btn = $('otMultiAdd');
   btn.disabled = n===0;
-  btn.textContent = n===0 ? 'Tap every paycheck that had OT'
-    : `Add ${n} paycheck${n===1?'':'s'} — ${otDefHours()} OT hrs each`;
+  btn.textContent = n===0 ? `Tap every paycheck that had ${otPickerMode==='ot'?'OT':'medic detail'}`
+    : `Add ${n} paycheck${n===1?'':'s'} — ${otDefHours()} ${otPickerMode==='ot'?'OT':'medic'} hrs each`;
 }
 $('otMultiAdd').onclick = ()=>{
   const h = otDefHours();
-  for (const b of $('otMultiGrid').querySelectorAll('.sel')) addOtRow({date:b.dataset.date, hours:h}, true);
+  const byDate = otRowByDate();
+  for (const b of $('otMultiGrid').querySelectorAll('.sel')){
+    const date = b.dataset.date, existing = byDate[date];
+    if (existing){
+      // the check is already in the list — fill this mode's hours on it
+      if (otPickerMode==='mupd'){
+        existing.querySelector('[data-k=mupdOn]').checked = true;
+        existing.querySelector('.mupdwrap').hidden = false;
+        existing.querySelector('[data-k=mupd]').value = h;
+      } else existing.querySelector('[data-k=hours]').value = h;
+      updateOtSummary(existing);
+    } else addOtRow(otPickerMode==='mupd' ? {date, mupd:h} : {date, hours:h}, true);
+  }
   pruneEmptyOtRows(); sortOtRows();
   closeOtPanel(); recalc();
 };
