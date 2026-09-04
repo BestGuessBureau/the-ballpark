@@ -109,7 +109,10 @@ td{padding:8px 5px;border-bottom:1px solid var(--line);vertical-align:top}
 td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.total td{border-bottom:none;border-top:2px solid var(--ink);font-weight:600}
 tr.take td{border-bottom:none;color:var(--muted)}
-.otrow{display:grid;grid-template-columns:1fr 1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:center}
+.otrow{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:6px;margin-bottom:10px;align-items:center}
+.otrow input[data-k=mupd]{display:none}
+#otDetails.mupd-on .otrow{grid-template-columns:1fr 1fr 1fr 1fr auto}
+#otDetails.mupd-on .otrow input[data-k=mupd]{display:block}
 .otrow select[data-k=date]{grid-column:1/-1}
 .otrow input{padding:9px 8px;font-size:14.5px}
 .otrow select{padding:9px 4px;font-size:14px}
@@ -284,8 +287,12 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
   <details id="otDetails">
     <summary>OT / comp log <span class="cnt" id="otCount"></span></summary>
     <div class="otrow" style="margin-bottom:2px">
-      <span class="hint" style="grid-column:1/-1">One row per check, with that check's totals: OT+comp $ · OT hours · other $ · medic hours. Picking a date starts the row at 12 OT hours (one shift) — worked more OT that period? Type the check's real total: 24, 36, and so on. "Medic" is the Fire MUPD line: hours detailed to a medic unit, paid at 5% of your hourly rate.</span>
+      <span class="hint" style="grid-column:1/-1">One row per check, with that check's totals: OT+comp $ · OT hours · other $. Picking a date starts the row at 12 OT hours (one shift) — worked more OT that period? Type the check's real total: 24, 36, and so on.</span>
     </div>
+    <details class="mini" id="mupdClub">
+      <summary>For the 5% club — detailed to a medic unit?</summary>
+      <span class="hint">Opens a "medic" box on each row: that check's Fire MUPD hours, paid at 5% of your hourly rate. The retro raises apply to those dollars too.</span>
+    </details>
     <div id="otRows"></div>
     <button class="add" id="addOt" type="button">Add a check</button>
     <button class="add alt" id="addOtMulti" type="button">Pick several dates…</button>
@@ -747,6 +754,11 @@ function addOtRow(vals){
   $('otRows').appendChild(div);
 }
 $('addOt').onclick = ()=>{ addOtRow(); $('otDetails').open = true; };
+
+// "For the 5% club" — reveal the medic (Fire MUPD) box on every row
+$('mupdClub').addEventListener('toggle', ()=>{
+  $('otDetails').classList.toggle('mupd-on', $('mupdClub').open);
+});
 
 // multi-date picker: tap several check dates, add them all with 12 hrs each
 const otMultiPanel = $('otMultiPanel');
