@@ -278,7 +278,7 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
   <details id="otDetails">
     <summary>OT / comp log <span class="cnt" id="otCount"></span></summary>
     <div class="otrow" style="margin-bottom:2px">
-      <span class="hint" style="grid-column:1/-1">Each row: check date, then OT+comp $ · OT hours · other $</span>
+      <span class="hint" style="grid-column:1/-1">Each row: check date, then OT+comp $ · OT hours · other $. Picking a date starts the row at 12 OT hours (a typical shift) — change or clear it to match your stub.</span>
     </div>
     <div id="otRows"></div>
     <button class="add" id="addOt" type="button">Add a check</button>
@@ -720,6 +720,15 @@ function addOtRow(vals){
   if (vals) for (const inp of div.querySelectorAll('input,select')) inp.value = vals[inp.dataset.k] ?? '';
   div.querySelector('.del').onclick = ()=>{ div.remove(); recalc(); };
   div.querySelectorAll('input,select').forEach(i=>i.addEventListener('input', recalc));
+  // picking a date on a fresh row pre-fills a typical 12-hour shift
+  const hoursInp = div.querySelector('[data-k=hours]');
+  hoursInp.addEventListener('input', ()=>{ hoursInp.dataset.manual = '1'; });
+  div.querySelector('[data-k=date]').addEventListener('change', ()=>{
+    const empty = k => div.querySelector(`[data-k=${k}]`).value.trim()==='';
+    if (empty('hours') && empty('wage') && empty('other') && !hoursInp.dataset.manual){
+      hoursInp.value = 12; recalc();
+    }
+  });
   $('otRows').appendChild(div);
 }
 $('addOt').onclick = ()=>{ addOtRow(); $('otDetails').open = true; };
