@@ -8,7 +8,7 @@ Enter your rank/step and dates, and get a ballpark estimate of your retro check.
 
 Open the live version here:
 
-**https://awswisher.github.io/the-ballpark/**
+**https://bestguessbureau.github.io/the-ballpark/**
 
 Or download [index.html](index.html) and open it in any browser — it works offline.
 
