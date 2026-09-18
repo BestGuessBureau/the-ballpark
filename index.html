@@ -195,6 +195,9 @@ button.add:active{transform:translateY(1px)}
 .dl.alt{background:#fff;color:var(--ink)}
 .dl:active{transform:translateY(1px)}
 .dl .sz{display:block;font-weight:500;font-size:12px;opacity:.7;margin-top:1px}
+.dl-status{margin:10px 0 0;padding:10px 12px;border-radius:8px;background:#e8f5ec;
+  color:var(--ok);font-size:13.5px;font-weight:600;line-height:1.45}
+.dl-status[hidden]{display:none}
 details.mini{border-top:none;margin-top:4px;padding-top:0}
 details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding:6px 0}
 @media (max-width:460px){
@@ -224,9 +227,10 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
     <span class="zoom">Tap to open full size</span>
   </a>
   <div class="dlrow">
-    <a class="dl" href="pay-scale-firefighter.jpg" download>Save the image<span class="sz">JPEG · 1.3 MB</span></a>
-    <a class="dl alt" href="pay-scale-with-raises.xlsx" download>Spreadsheet<span class="sz">Excel · all ranks</span></a>
+    <a class="dl" href="pay-scale-firefighter.jpg" download data-what="image">Save the image<span class="sz">JPEG · 1.3 MB</span></a>
+    <a class="dl alt" href="pay-scale-with-raises.xlsx" download data-what="spreadsheet">Spreadsheet<span class="sz">Excel · all ranks</span></a>
   </div>
+    <p class="dl-status" id="dlStatus" role="status" aria-live="polite" hidden></p>
     <p class="scale-note"><b>Firefighter scale.</b> Longevity assumes an April 2023 City start date &mdash; if yours differs, your longevity line and the last three columns will too. The spreadsheet recalculates from your own start date and covers every rank.</p>
   </div>
   </details>
@@ -1123,6 +1127,15 @@ function resetAll(){
   recalc();
 }
 $('resetBtn').onclick=resetAll;
+
+// Phones save downloads silently — confirm the tap landed so nobody taps twice
+// wondering whether it worked.
+document.querySelectorAll('#scaleSec .dl').forEach(a=>a.addEventListener('click', ()=>{
+  const st=$('dlStatus'); if(!st) return;
+  st.textContent='Saving the '+(a.dataset.what||'file')+' — it lands in your Downloads folder. '
+    +'Check the notification bar or your Files app.';
+  st.hidden=false;
+}));
 
 document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input', ()=>{
   if (el.id==='rank') refreshSteps();
