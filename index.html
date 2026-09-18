@@ -175,7 +175,12 @@ button.add:active{transform:translateY(1px)}
 .add.alt{background:#fff;color:var(--ink);border:1px solid var(--ink);margin-left:8px}
 #otMultiAdd{width:100%;margin-top:10px}
 #otMultiAdd:disabled{opacity:.5;cursor:default}
-/* Pay scale download card */
+/* Pay scale download card — a slim tab until it's opened */
+#scaleSec{padding:2px 16px}
+#scaleSec summary{font-family:"Barlow Condensed",system-ui,sans-serif;font-weight:600;
+  font-size:clamp(16px,4.6vw,18px);text-transform:uppercase;letter-spacing:.02em;padding:12px 0}
+.scale-body{padding-bottom:14px}
+.scale-body .sect-note{margin-top:0}
 .scale-note{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0}
 .scale-shot{display:block;margin:10px 0 0;border:1px solid var(--line);border-radius:8px;
   overflow:hidden;background:#fff;text-decoration:none}
@@ -209,9 +214,11 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
 </header>
 
 <section id="scaleSec">
-  <h2>Pay scale with the raises</h2>
-  <p class="sect-note">The step sheet everyone passes around, updated for the Award. Save it and send it on.</p>
-  <a class="scale-shot" href="pay-scale-firefighter.jpg" target="_blank" rel="noopener">
+  <details id="scaleDetails">
+  <summary>Pay scale with raises</summary>
+  <div class="scale-body">
+    <p class="sect-note">The step sheet everyone passes around, updated for the Award. Save it and send it on.</p>
+    <a class="scale-shot" href="pay-scale-firefighter.jpg" target="_blank" rel="noopener">
     <img src="pay-scale-firefighter-preview.jpg" width="1800" height="760" loading="lazy" decoding="async"
          alt="Firefighter pay scale table showing salary, bi-weekly base, premium, longevity, total annual pay and OT rate at each step and raise date from 4/6/2023 through 4/6/2028.">
     <span class="zoom">Tap to open full size</span>
@@ -220,7 +227,9 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
     <a class="dl" href="pay-scale-firefighter.jpg" download>Save the image<span class="sz">JPEG · 1.3 MB</span></a>
     <a class="dl alt" href="pay-scale-with-raises.xlsx" download>Spreadsheet<span class="sz">Excel · all ranks</span></a>
   </div>
-  <p class="scale-note"><b>Firefighter scale.</b> Longevity assumes an April 2023 City start date &mdash; if yours differs, your longevity line and the last three columns will too. The spreadsheet recalculates from your own start date and covers every rank.</p>
+    <p class="scale-note"><b>Firefighter scale.</b> Longevity assumes an April 2023 City start date &mdash; if yours differs, your longevity line and the last three columns will too. The spreadsheet recalculates from your own start date and covers every rank.</p>
+  </div>
+  </details>
 </section>
 
 <div class="result empty" id="resultPanel">
