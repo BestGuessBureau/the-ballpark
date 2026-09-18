@@ -175,6 +175,21 @@ button.add:active{transform:translateY(1px)}
 .add.alt{background:#fff;color:var(--ink);border:1px solid var(--ink);margin-left:8px}
 #otMultiAdd{width:100%;margin-top:10px}
 #otMultiAdd:disabled{opacity:.5;cursor:default}
+/* Pay scale download card */
+.scale-note{color:var(--muted);font-size:13px;line-height:1.5;margin:8px 0 0}
+.scale-shot{display:block;margin:10px 0 0;border:1px solid var(--line);border-radius:8px;
+  overflow:hidden;background:#fff;text-decoration:none}
+.scale-shot img{display:block;width:100%;height:auto}
+.scale-shot .zoom{display:block;background:var(--paper);border-top:1px solid var(--line);
+  color:var(--muted);font-family:"Barlow Condensed";font-weight:600;font-size:12.5px;
+  letter-spacing:.07em;text-transform:uppercase;text-align:center;padding:6px 8px}
+.dlrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.dl{flex:1 1 auto;min-width:150px;text-align:center;text-decoration:none;font:inherit;font-weight:600;
+  font-size:15px;background:var(--ink);color:#fff;border:1px solid var(--ink);border-radius:8px;
+  padding:11px 14px;cursor:pointer}
+.dl.alt{background:#fff;color:var(--ink)}
+.dl:active{transform:translateY(1px)}
+.dl .sz{display:block;font-weight:500;font-size:12px;opacity:.7;margin-top:1px}
 details.mini{border-top:none;margin-top:4px;padding-top:0}
 details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding:6px 0}
 @media (max-width:460px){
@@ -192,6 +207,21 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
   <p class="award">Local 22 · 2025–2027 Act 111 Award</p>
   <p class="privacy">Your numbers stay on your phone.</p>
 </header>
+
+<section id="scaleSec">
+  <h2>Pay scale with the raises</h2>
+  <p class="sect-note">The step sheet everyone passes around, updated for the Award. Save it and send it on.</p>
+  <a class="scale-shot" href="pay-scale-firefighter.jpg" target="_blank" rel="noopener">
+    <img src="pay-scale-firefighter-preview.jpg" width="1800" height="760" loading="lazy" decoding="async"
+         alt="Firefighter pay scale table showing salary, bi-weekly base, premium, longevity, total annual pay and OT rate at each step and raise date from 4/6/2023 through 4/6/2028.">
+    <span class="zoom">Tap to open full size</span>
+  </a>
+  <div class="dlrow">
+    <a class="dl" href="pay-scale-firefighter.jpg" download>Save the image<span class="sz">JPEG · 1.3 MB</span></a>
+    <a class="dl alt" href="pay-scale-with-raises.xlsx" download>Spreadsheet<span class="sz">Excel · all ranks</span></a>
+  </div>
+  <p class="scale-note"><b>Firefighter scale.</b> Longevity assumes an April 2023 City start date &mdash; if yours differs, your longevity line and the last three columns will too. The spreadsheet recalculates from your own start date and covers every rank.</p>
+</section>
 
 <div class="result empty" id="resultPanel">
   <div class="stripe"></div>

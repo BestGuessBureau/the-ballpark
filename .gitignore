@@ -3,3 +3,9 @@
 *.jpeg
 *.heic
 *.pdf
+
+# Exceptions: the pay-scale graphics are generated from the published Local 22
+# scale, not personal documents. Listed one by one so the rule above still
+# catches anything else dropped in here.
+!pay-scale-firefighter.jpg
+!pay-scale-firefighter-preview.jpg

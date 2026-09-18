@@ -12,6 +12,15 @@ Open the live version here:
 
 Or download [index.html](index.html) and open it in any browser — it works offline.
 
+## Pay scale with the raises
+
+The Firefighter step sheet updated for the Award is on the page up top — tap to open it full size, or download it:
+
+- [pay-scale-firefighter.jpg](pay-scale-firefighter.jpg) — the table as an image, sized to stay sharp when you zoom in
+- [pay-scale-with-raises.xlsx](pay-scale-with-raises.xlsx) — the spreadsheet behind it, every figure a live formula
+
+The image is the Firefighter scale, and its longevity assumes an April 2023 City start date. The spreadsheet recalculates from whatever start date you enter and has a second tab covering every rank and step.
+
 ## Privacy
 
 Everything runs in your browser. Nothing you enter leaves your phone — there's no server, no tracking, and no data collection.
