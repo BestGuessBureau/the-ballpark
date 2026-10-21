@@ -337,7 +337,7 @@ details.mini summary{font-size:13.5px;color:var(--muted);font-weight:500;padding
   <details>
     <summary>First check at the new rate &amp; method</summary>
     <label for="firstNew">First regular check paid at the new award salary
-      <span class="hint">Defaults to the first check dated after today. Old-rate retro stops the check before this date. This is NOT the retro lump-sum date.</span>
+      <span class="hint">Already getting the new rate? Pick the check your base pay first went up on. If not, leave the default — the next check after today. Old-rate retro stops the check before this date. This is NOT the retro lump-sum date.</span>
     </label>
     <select id="firstNew"></select>
     <label for="method">Calculation method
@@ -441,6 +441,7 @@ const C = {
   // "first check after today", which creeps forward every two weeks.
   IMPLEMENTATION_DATE: null,
   AWARD_START: '2025-07-01',
+  AWARD_ISSUED: '2026-06-26', // no check could carry the new rate before this
   STEP2_DATE: '2026-01-01',
   STEP3_DATE: '2026-07-01',
   RAISES: { r1: 0.03, r2: 0.01, r3: 0.03 },
@@ -787,14 +788,16 @@ function refreshSteps(){
     if ([...$('step').options].some(o=>o.value===cur)) $('step').value = cur;
   }
 }
-// populate future pay-date select
+// populate pay-date select: every check since the Award was issued, so anyone
+// already paid at the new rate can pick the check it arrived on
 function refreshFirstNew(){
   const t = todayISO(), sel = $('firstNew'), keep = sel.value;
   sel.innerHTML='';
-  const future = PAY_DATES.filter(d=>d>t);
-  for (const d of future){ const o=document.createElement('option'); o.value=d;
+  const dates = PAY_DATES.filter(d=>d>C.AWARD_ISSUED);
+  for (const d of dates){ const o=document.createElement('option'); o.value=d;
     const [y,m,dd]=d.split('-'); o.textContent=`${m}/${dd}/${y}`; sel.appendChild(o); }
-  sel.value = future.includes(keep) ? keep : (future[0]||'');
+  const dflt = C.IMPLEMENTATION_DATE || dates.find(d=>d>t) || '';
+  sel.value = dates.includes(keep) ? keep : dflt;
 }
 refreshFirstNew();
 
@@ -1121,7 +1124,7 @@ function resetAll(){
   $('d_pa').value=3.07; $('d_phl').value=3.735; $('d_pen').value=0;
   $('rank').value=''; refreshSteps(); $('step').value='';
   $('chg1').value=''; $('chg2').value=''; $('method').value='Compound'; $('prorate').checked=true;
-  refreshFirstNew();
+  $('firstNew').value=''; refreshFirstNew();
   $('otRows').innerHTML='';
   closeOtPanel();
   $('startDate').value='';
