@@ -17,6 +17,11 @@
 <meta name="twitter:description" content="Estimate your retro check from the 2025–2027 Act 111 Award. Estimates only — nothing you enter leaves your phone.">
 <meta name="twitter:image" content="https://bestguessbureau.github.io/the-ballpark/og-card-v2.png">
 <meta name="theme-color" content="#1c1e22">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Ballpark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -1142,6 +1147,12 @@ document.querySelectorAll('input,select').forEach(el=>el.addEventListener('input
   recalc();
 }));
 recalc();
+
+// Home-screen app: keep a copy on the phone so it opens with no signal.
+// Not available when this file is opened straight from Downloads.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  addEventListener('load', ()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+}
 </script>
 </body>
 </html>

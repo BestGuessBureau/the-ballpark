@@ -12,6 +12,13 @@ Open the live version here:
 
 Or download [index.html](index.html) and open it in any browser — it works offline.
 
+### Put it on your home screen
+
+The Ballpark installs like an app, with its own icon, and opens without a signal once you've loaded it.
+
+- **iPhone (Safari):** tap Share → **Add to Home Screen**.
+- **Android (Chrome):** tap ⋮ → **Add to Home screen** (or **Install app**).
+
 ## Pay scale with the raises
 
 The Firefighter step sheet updated for the Award is on the page up top — tap to open it full size, or download it:
